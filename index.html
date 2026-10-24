@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Six Projects Suite — Interactive Showcase</title>
+  <style>
+    :root {
+      --bg-dark: #0b0d0e;
+      --bg-card: #14171a;
+      --border: #262b30;
+      --accent: #d97757;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Master Switcher Bar */
+    header.hub-navbar {
+      background: #101316;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      z-index: 30;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .claude-spark {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .project-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .proj-tab {
+      background: #181c20;
+      color: #cbd5e1;
+      border: 1px solid #2b3138;
+      padding: 6px 11px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .proj-tab:hover {
+      background: #22282e;
+      color: #fff;
+    }
+
+    .proj-tab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .model-tag {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.28);
+      opacity: 0.9;
+    }
+
+    /* Overview Grid View (Slide 1 Bento Grid + Instant Launchers) */
+    main.hub-content {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .overview-pane {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 28px 24px 60px;
+      display: none;
+    }
+
+    .overview-pane.active {
+      display: block;
+    }
+
+    .hero-banner {
+      max-width: 1180px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 18px;
+    }
+
+    .hero-banner h1 {
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .hero-banner p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 6px;
+      max-width: 680px;
+    }
+
+    .cards-bento {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .project-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .project-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+    }
+
+    .card-top-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .num-pill {
+      background: rgba(217, 119, 87, 0.16);
+      color: #f3a68e;
+      padding: 3px 8px;
+      border-radius: 99px;
+      font-weight: 700;
+    }
+
+    .model-badge {
+      color: var(--text-muted);
+      background: #1d2226;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .project-card h2 {
+      font-size: 17px;
+      line-height: 1.3;
+      margin-top: 8px;
+      color: #fff;
+    }
+
+    .project-card p {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #9ca3af;
+      margin-top: 6px;
+    }
+
+    .feature-list {
+      list-style: none;
+      font-size: 11.5px;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 8px;
+      border-top: 1px solid #22272c;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn-launch {
+      flex: 1;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .btn-standalone {
+      background: #1f2429;
+      color: #d1d5db;
+      border: 1px solid #30373f;
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      text-decoration: none;
+      font-family: var(--font-mono);
+    }
+
+    /* Embedded Live Application Frame */
+    #appFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+      background: #111;
+    }
+
+    #appFrame.active {
+      display: block;
+    }
+
+    @media (max-width: 960px) {
+      .cards-bento {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hub-navbar">
+    <div class="brand-cluster">
+      <div class="claude-spark">✳</div>
+      <div>
+        <div class="brand-title">Claude 5.5 — Six Featured Projects Suite</div>
+        <div class="brand-sub">Source: @evolving.ai / @claudeai (IG: Deo-ebkAExL)</div>
+      </div>
+    </div>
+
+    <nav class="project-tabs">
+      <button class="proj-tab active" data-target="overview">⊞ All 6 Overview</button>
+      <button class="proj-tab" data-target="projects/01-firetrace/index.html">
+        1. FireTrace <span class="model-tag">Opus 5.5</span>
+      </button>
+      <button class="proj-tab" data-target="projects/02-doodle-chess/index.html">
+        2. Doodle Chess <span class="model-tag">Sonnet 5.5</span>
+      </button>
+      <button class="proj-tab" data-target="projects/03-handwriting-font/index.html">
+        3. Notes → Font <span class="model-tag">Opus 5.5</span>
+      </button>
+      <button class="proj-tab" data-target="projects/04-magnetic-field/index.html">
+        4. 3D Magnetic Field <span class="model-tag">Opus 5.5</span>
+      </button>
+      <button class="proj-tab" data-target="projects/05-angioview/index.html">
+        5. AngioView 3D Heart <span class="model-tag">Claude</span>
+      </button>
+      <button class="proj-tab" data-target="projects/06-coded-poems/index.html">
+        6. 20 Coded Poems <span class="model-tag">Haiku 5.5</span>
+      </button>
+    </nav>
+  </header>
+
+  <main class="hub-content">
+    <!-- 6-Project Overview Bento Grid -->
+    <section class="overview-pane active" id="overviewPane">
+      <div class="hero-banner">
+        <div>
+          <h1>CLAUDE JUST DROPPED SIX PROJECTS<br/>THAT CAUGHT THEIR ATTENTION</h1>
+          <p>
+            Complete, interactive implementations of all six showcase applications from
+            <code>instagram.com/p/Deo-ebkAExL/</code>. Click any project card or top tab to launch immediately.
+          </p>
+        </div>
+      </div>
+
+      <div class="cards-bento">
+        <!-- 1. FireTrace -->
+        <article class="project-card" data-launch="projects/01-firetrace/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 01</span>
+              <span class="model-badge">Claude Opus 5.5</span>
+            </div>
+            <h2>FireTrace — Real-Time 3D Wildfire Forensic Map</h2>
+            <p>Interactive 3D San Gabriel Mountains terrain showing how the Ridgeview wildfire spreads across landscapes, tracks hotspots, and visualizes retardant drops.</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ 3D rotatable terrain with dNBR burn scar & wind vectors</li>
+            <li>✓ Interactive timeline scrubber + 3 live telemetry charts</li>
+            <li>✓ Drop VLAT retardant lines & ignite spot fires in 3D</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/01-firetrace/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+
+        <!-- 2. Doodle Chess -->
+        <article class="project-card" data-launch="projects/02-doodle-chess/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 02</span>
+              <span class="model-badge">Claude Sonnet 5.5</span>
+            </div>
+            <h2>Doodle Chess on Hand-Drawn Notebook Paper</h2>
+            <p>Playable chess game on lined notebook paper replacing traditional chess pieces with colorful doodles (Queen Bee, Star Blob, Doodle Llama, Spotted Toadstools).</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ Full legal chess engine + Minimax AI & 2-Player mode</li>
+            <li>✓ Hand-drawn red crayon selection circles & move dots</li>
+            <li>✓ Margin doodles (sleeping cloud, molehill, pastel rainbow)</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/02-doodle-chess/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+
+        <!-- 3. Notes -> Font -->
+        <article class="project-card" data-launch="projects/03-handwriting-font/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 03</span>
+              <span class="model-badge">Claude Opus 5.5 · $13.68</span>
+            </div>
+            <h2>120 Pages of Handwritten Notes → Working Font</h2>
+            <p>Interactive 6-step pipeline & live font studio recreating college Computer Networks notes into the working "Harshpreet Hand" vector font.</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ Interactive ink separator, stroke matcher & Bézier tracer</li>
+            <li>✓ Toggleable signature quirks (ring-dotted i, half-crossed t, ->)</li>
+            <li>✓ Live notebook typewriter + downloadable .SVG font file</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/03-handwriting-font/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+
+        <!-- 4. 3D Magnetic Field -->
+        <article class="project-card" data-launch="projects/04-magnetic-field/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 04</span>
+              <span class="model-badge">Claude Opus 5.5</span>
+            </div>
+            <h2>Induction Bench — 3D Magnetic Field & Faraday Lab</h2>
+            <p>Move magnets through a multi-layer copper solenoid in 3D, switch magnet alloys (N52, N42, SmCo, C8), and inspect real-time induced EMF.</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ Live 3D magnetic dipole field lines & camera presets</li>
+            <li>✓ Analog galvanometer needle + dual-trace CRT oscilloscope</li>
+            <li>✓ Real-time Flux Linkage Λ(x) curve & Lenz braking force</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/04-magnetic-field/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+
+        <!-- 5. AngioView 3D Heart -->
+        <article class="project-card" data-launch="projects/05-angioview/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 05</span>
+              <span class="model-badge">Claude Medical</span>
+            </div>
+            <h2>AngioView — 3D Heart & Coronary Angiography Trainer</h2>
+            <p>Built by a cardiology fellow to help medical trainees understand fluoroscopic heart scans and explore 3D coronary arteries across LAO/RAO & CRA/CAU angles.</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ Coupled 3D Heart + simulated X-ray fluoroscopy viewport</li>
+            <li>✓ Standard projection presets (Spider, RAO caudal, LAO cranial)</li>
+            <li>✓ Interactive 2D angle map & live 3D C-arm gantry model</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/05-angioview/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+
+        <!-- 6. 20 Coded Poems -->
+        <article class="project-card" data-launch="projects/06-coded-poems/index.html">
+          <div>
+            <div class="card-top-meta">
+              <span class="num-pill">PROJECT 06</span>
+              <span class="model-badge">Claude Haiku 5.5</span>
+            </div>
+            <h2>20 Haiku Poems Turned Into Coded JS Animations</h2>
+            <p>All 20 haiku poems brought to life with procedural JavaScript canvas animations and charcoal-textured typography, starting with the exact 3 poems from the reel.</p>
+          </div>
+          <ul class="feature-list">
+            <li>✓ Includes Espalier Pear, Silk Spiderweb & Autumn Ink Drops</li>
+            <li>✓ Complete 20-poem anthology in both Stage & Grid views</li>
+            <li>✓ Interactive mouse-responsive botanical & nature physics</li>
+          </ul>
+          <div class="card-actions">
+            <button class="btn-launch">Launch Interactive App</button>
+            <a class="btn-standalone" href="projects/06-coded-poems/index.html" target="_blank" rel="noopener">↗</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Embedded Live Application Iframe -->
+    <iframe id="appFrame" title="Active Project Viewport"></iframe>
+  </main>
+
+  <script>
+    const overviewPane = document.getElementById('overviewPane');
+    const appFrame = document.getElementById('appFrame');
+    const tabs = document.querySelectorAll('.proj-tab');
+
+    function activateTarget(target) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.target === target));
+      if (target === 'overview') {
+        overviewPane.classList.add('active');
+        appFrame.classList.remove('active');
+      } else {
+        overviewPane.classList.remove('active');
+        appFrame.classList.add('active');
+        if (!appFrame.src.endsWith(target)) {
+          appFrame.src = target;
+        }
+      }
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => activateTarget(tab.dataset.target));
+    });
+
+    document.querySelectorAll('.project-card').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('.btn-standalone')) return;
+        activateTarget(card.dataset.launch);
+      });
+    });
+  </script>
+</body>
+</html>

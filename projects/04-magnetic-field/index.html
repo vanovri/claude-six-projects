@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Induction Bench — Interactive 3D Magnetic Field & Faraday Simulator</title>
+  <style>
+    :root {
+      --bg-app: #f3f1eb;
+      --bg-card: #faf8f3;
+      --border: #dcd8ce;
+      --text-main: #222320;
+      --text-muted: #6c6e66;
+      --accent-green: #229954;
+      --accent-copper: #a85626;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-app);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 34px 1fr 195px;
+      grid-template-columns: 235px 1fr 270px;
+      gap: 6px;
+      padding: 6px;
+    }
+
+    /* Top Bar */
+    header.bench-header {
+      grid-column: 1 / -1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-pill {
+      text-decoration: none;
+      color: var(--text-main);
+      font-weight: 600;
+      background: #e8e5dc;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .status-note {
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
+    }
+
+    /* Left Panel: Controls */
+    aside.controls-panel {
+      grid-row: 2 / 4;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+
+    .panel-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }
+
+    .panel-title-row strong {
+      font-size: 12px;
+    }
+
+    .panel-title-row span {
+      font-size: 9.5px;
+      color: var(--text-muted);
+    }
+
+    .ctrl-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ebe8df;
+    }
+
+    .ctrl-label {
+      font-weight: 600;
+      color: #3a3b36;
+      font-size: 10.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .pill-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .mat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .bench-btn {
+      background: #eae7de;
+      border: 1px solid #d4d0c5;
+      border-radius: 4px;
+      padding: 5px 6px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #333530;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .bench-btn:hover {
+      background: #e0ddd2;
+    }
+
+    .bench-btn.active-green {
+      background: var(--accent-green);
+      border-color: #1b7f43;
+      color: #fff;
+    }
+
+    .bench-btn.active-copper {
+      background: var(--accent-copper);
+      border-color: #88431b;
+      color: #fff;
+    }
+
+    .bench-btn.active-dark {
+      background: #323530;
+      border-color: #1f211e;
+      color: #fff;
+    }
+
+    .mat-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 5px 6px;
+    }
+
+    .mat-sub {
+      font-size: 8.5px;
+      font-weight: 400;
+      opacity: 0.85;
+      font-family: var(--font-mono);
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--text-muted);
+    }
+
+    input[type="range"].bench-slider {
+      width: 100%;
+      accent-color: #2f332e;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    /* Center 3D Viewport */
+    main.field-viewport {
+      position: relative;
+      background: #171917;
+      border: 1px solid #2b2e2a;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    #field3DCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: ew-resize;
+    }
+
+    .fig-caption-top {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      color: #a6aba3;
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .fig-caption-top strong {
+      color: #e4e7e2;
+    }
+
+    .cam-presets {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      display: flex;
+      background: rgba(38, 41, 38, 0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .cam-btn {
+      background: transparent;
+      border: none;
+      color: #b5bab2;
+      padding: 4px 9px;
+      font-size: 10.5px;
+      cursor: pointer;
+    }
+
+    .cam-btn.active {
+      background: #eceae3;
+      color: #181a18;
+      font-weight: 600;
+    }
+
+    .b-scale-legend {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      color: #9ca199;
+      font-size: 9.5px;
+      font-family: var(--font-mono);
+    }
+
+    .b-gradient-bar {
+      width: 165px;
+      height: 5px;
+      border-radius: 2px;
+      margin: 3px 0;
+      background: linear-gradient(90deg, #6c5ce7, #00cec9, #55efc4, #ffeaa7);
+    }
+
+    .b-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5px;
+    }
+
+    .drag-hint-bottom {
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      color: #82877f;
+      font-size: 10px;
+    }
+
+    /* Right Panel: Galvanometer + Telemetry + Apparatus */
+    aside.telemetry-panel {
+      grid-row: 2 / 3;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .galvano-box {
+      background: #f3f0e8;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    #galvanoCanvas {
+      width: 100%;
+      height: 82px;
+      display: block;
+    }
+
+    .readout-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .readout-card {
+      background: #f3f0e8;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+    }
+
+    .r-title {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .r-val {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      color: #1f211e;
+    }
+
+    .r-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .apparatus-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .apparatus-table td {
+      padding: 2.5px 0;
+      border-bottom: 1px dotted #dedad0;
+    }
+
+    .apparatus-table td:first-child {
+      color: var(--text-muted);
+    }
+
+    .apparatus-table td:last-child {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+    }
+
+    /* Bottom Row: Fig. 2 Oscilloscope & Fig. 3 Flux Linkage Curve */
+    section.bottom-charts {
+      grid-column: 2 / 4;
+      display: grid;
+      grid-template-columns: 1.08fr 1fr;
+      gap: 6px;
+    }
+
+    .fig-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .fig-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    .fig-header strong {
+      color: var(--text-main);
+    }
+
+    .scope-canvas {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      border-radius: 4px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="bench-header">
+    <div class="header-left">
+      <a href="../../index.html" class="back-pill">← All 6 Projects</a>
+      <div>
+        <strong>Induction bench</strong>
+        <span style="color:var(--text-muted)">magnet, coil and field, interactive</span>
+      </div>
+      <div class="status-note">
+        <span class="status-dot"></span>
+        <span id="liveStatusNote">Magnet moving through coil — Faraday induction active</span>
+      </div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)" id="simClockLabel">
+      t 1.8 s  step 2.1 ms
+    </div>
+  </header>
+
+  <!-- Left Panel: Controls -->
+  <aside class="controls-panel">
+    <div class="panel-title-row">
+      <strong>Controls</strong>
+      <span>drag the magnet in the view</span>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label"><span>Experiment</span></div>
+      <div class="pill-row">
+        <button class="bench-btn active-dark" id="btnExpCoil">• Coil</button>
+        <button class="bench-btn" id="btnExpTube">• Tube drop</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label"><span>Magnet material</span></div>
+      <div class="mat-grid">
+        <button class="bench-btn mat-btn" data-mat="N52" data-br="1.48" data-name="Neodymium iron boron, N52">
+          <span class="mat-sub">1.48 T</span><strong>N52</strong>
+        </button>
+        <button class="bench-btn mat-btn active-green" data-mat="N42" data-br="1.30" data-name="Neodymium iron boron, N42">
+          <span class="mat-sub">1.30 T</span><strong>N42</strong>
+        </button>
+        <button class="bench-btn mat-btn" data-mat="SmCo" data-br="1.05" data-name="Samarium cobalt, SmCo">
+          <span class="mat-sub">1.05 T</span><strong>SmCo</strong>
+        </button>
+        <button class="bench-btn mat-btn" data-mat="C8" data-br="0.39" data-name="Strontium ferrite, C8">
+          <span class="mat-sub">0.39 T</span><strong>C8</strong>
+        </button>
+      </div>
+      <div class="meta-line">
+        <span id="matDescLabel">Neodymium iron boron, N42</span>
+        <strong id="matBrLabel" style="font-family:var(--font-mono)">Br 1.30 T</strong>
+      </div>
+      <div class="pill-row" style="margin-top:2px">
+        <button class="bench-btn active-dark" id="btnSwinging">• Swinging</button>
+        <button class="bench-btn" id="btnFlipPoles">• Flip poles</button>
+      </div>
+      <div class="ctrl-label" style="margin-top:4px">
+        <span>Swing speed</span>
+        <span id="swingSpeedLabel" style="font-family:var(--font-mono)">0.30 m/s</span>
+      </div>
+      <input type="range" class="bench-slider" id="swingSpeedSlider" min="0.05" max="1.20" step="0.05" value="0.30" />
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label"><span>Coil wire</span></div>
+      <div class="mat-grid">
+        <button class="bench-btn mat-btn active-copper" data-wire="Cu" data-res="2.01" data-name="Copper wire, 0.5 mm">
+          <span class="mat-sub">1.7 µΩ·cm</span><strong>Cu</strong>
+        </button>
+        <button class="bench-btn mat-btn" data-wire="Ag" data-res="1.89" data-name="Silver wire, 0.5 mm">
+          <span class="mat-sub">1.6 µΩ·cm</span><strong>Ag</strong>
+        </button>
+        <button class="bench-btn mat-btn" data-wire="Al" data-res="3.32" data-name="Aluminum wire, 0.5 mm">
+          <span class="mat-sub">2.8 µΩ·cm</span><strong>Al</strong>
+        </button>
+        <button class="bench-btn mat-btn" data-wire="NiCr" data-res="128.0" data-name="Nichrome wire, 0.5 mm">
+          <span class="mat-sub">110 µΩ·cm</span><strong>NiCr</strong>
+        </button>
+      </div>
+      <div class="meta-line">
+        <span id="wireDescLabel">Copper wire, 0.5 mm</span>
+        <strong id="wireResLabel" style="font-family:var(--font-mono)">R 2.01 Ω</strong>
+      </div>
+      <div class="ctrl-label" style="margin-top:4px">
+        <span>Turns</span>
+        <span id="turnsLabel" style="font-family:var(--font-mono)">200</span>
+      </div>
+      <input type="range" class="bench-slider" id="turnsSlider" min="20" max="400" step="10" value="200" />
+
+      <div class="ctrl-label" style="margin-top:4px">
+        <span>Coil angle</span>
+        <span id="coilAngleLabel" style="font-family:var(--font-mono)">0°</span>
+      </div>
+      <input type="range" class="bench-slider" id="coilAngleSlider" min="-60" max="60" step="5" value="0" />
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label"><span>Core</span></div>
+      <div class="pill-row">
+        <button class="bench-btn active-dark" id="btnCoreAir">• Air</button>
+        <button class="bench-btn" id="btnCoreIron">• Soft iron</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group" style="border-bottom:none">
+      <div class="ctrl-label">
+        <span>Battery Voltage</span>
+        <span id="batteryLabel" style="font-family:var(--font-mono)">off</span>
+      </div>
+      <input type="range" class="bench-slider" id="batterySlider" min="-12" max="12" step="1" value="0" />
+    </div>
+  </aside>
+
+  <!-- Center 3D Magnetic Field Canvas -->
+  <main class="field-viewport">
+    <canvas id="field3DCanvas"></canvas>
+
+    <div class="fig-caption-top">
+      <strong>Fig. 1</strong> Field of the magnet and coil · Section on the plane through the axis
+    </div>
+
+    <div class="cam-presets">
+      <button class="cam-btn active" data-cam="angled">Angled</button>
+      <button class="cam-btn" data-cam="side">Side</button>
+      <button class="cam-btn" data-cam="top">Top</button>
+      <button class="cam-btn" data-cam="axis">Along axis</button>
+    </div>
+
+    <div class="b-scale-legend">
+      <div>|B| field strength, log scale</div>
+      <div class="b-gradient-bar"></div>
+      <div class="b-ticks">
+        <span>1 mT</span>
+        <span>10 mT</span>
+        <span>100 mT</span>
+        <span>1 T</span>
+      </div>
+    </div>
+
+    <div class="drag-hint-bottom">
+      drag magnet horizontally · scroll to zoom
+    </div>
+  </main>
+
+  <!-- Right Panel: Galvanometer & Telemetry -->
+  <aside class="telemetry-panel">
+    <div class="galvano-box">
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Galvanometer, coil current</div>
+      <canvas id="galvanoCanvas" width="240" height="82"></canvas>
+    </div>
+
+    <div class="readout-grid">
+      <div class="readout-card">
+        <div class="r-title">— Induced EMF</div>
+        <div class="r-val" id="readEmf">-566 µV</div>
+        <div class="r-sub" id="readFlux">flux 513 µWb</div>
+      </div>
+      <div class="readout-card">
+        <div class="r-title">— Current</div>
+        <div class="r-val" id="readCurrent">-187 µA</div>
+        <div class="r-sub" id="readPower">heat 35 nW</div>
+      </div>
+      <div class="readout-card">
+        <div class="r-title">Coil field, center</div>
+        <div class="r-val" id="readBCoil">-1.21 µT</div>
+        <div class="r-sub" id="readCoilMeta">200 turns, 2.01 Ω</div>
+      </div>
+      <div class="readout-card">
+        <div class="r-title">Force on magnet</div>
+        <div class="r-val" id="readForce">0 N</div>
+        <div class="r-sub">Lenz braking</div>
+      </div>
+    </div>
+
+    <div style="margin-top:2px">
+      <div class="panel-title-row" style="margin-bottom:4px">
+        <strong style="font-size:11px">Apparatus</strong>
+        <span>as modeled</span>
+      </div>
+      <table class="apparatus-table">
+        <tr><td>Magnet</td><td>Ø 12 × 25 mm, 21.2 g</td></tr>
+        <tr><td>Remanence</td><td id="specBr">1.30 T</td></tr>
+        <tr><td>Coil</td><td id="specCoil">bore 30 mm, 200 turns, 10 layers</td></tr>
+        <tr><td>Wire</td><td id="specWire">Cu, Ø 0.5 mm, 23.5 m</td></tr>
+        <tr><td>Resistance</td><td id="specRes">2.01 Ω + 1 Ω meter</td></tr>
+        <tr><td>Inductance</td><td id="specInd">1.61 mH (Wheeler)</td></tr>
+        <tr><td>Time constant</td><td id="specTau">534 µs</td></tr>
+      </table>
+    </div>
+  </aside>
+
+  <!-- Bottom Row: Fig. 2 Oscilloscope & Fig. 3 Flux Linkage Curve -->
+  <section class="bottom-charts">
+    <div class="fig-card">
+      <div class="fig-header">
+        <strong>Fig. 2 Oscilloscope</strong>
+        <span><span style="color:#55efc4">■ CH1 Induced EMF</span> · <span style="color:#fdcb6e">■ CH2 Induced current</span></span>
+      </div>
+      <canvas class="scope-canvas" id="oscCanvas"></canvas>
+    </div>
+
+    <div class="fig-card">
+      <div class="fig-header">
+        <strong>Fig. 3 Flux linkage Λ against magnet position</strong>
+        <span>EMF = −slope × speed</span>
+      </div>
+      <canvas class="scope-canvas" id="fluxCanvas"></canvas>
+    </div>
+  </section>
+
+  <script>
+    // =========================================================================
+    // 3D Magnetic Dipole Field & Faraday Electromagnetic Induction Simulator
+    // =========================================================================
+    const sim = {
+      t: 0,
+      magnetX: 0.055,       // meters along axis (-0.14 to +0.14 m)
+      magnetV: -0.30,       // m/s velocity
+      swinging: true,
+      swingSpeed: 0.30,
+      flippedPoles: false,
+      br: 1.30,             // Remanence (Tesla)
+      wireR: 2.01,          // Coil resistance (Ohms)
+      wireName: 'Cu',
+      turns: 200,
+      coilAngleDeg: 0,
+      ironCore: false,
+      batteryV: 0,
+      camView: 'angled',
+      yaw: -0.46,
+      pitch: 0.32,
+      zoom: 1.0,
+      historyEmf: new Array(180).fill(0),
+      historyCur: new Array(180).fill(0),
+      emfVolts: 0,
+      currentAmps: 0,
+      fluxLinkageWb: 0
+    };
+
+    const fieldCanvas = document.getElementById('field3DCanvas');
+    const fCtx = fieldCanvas.getContext('2d');
+    const galvCanvas = document.getElementById('galvanoCanvas');
+    const gCtx = galvCanvas.getContext('2d');
+    const oscCanvas = document.getElementById('oscCanvas');
+    const oCtx = oscCanvas.getContext('2d');
+    const fluxCanvas = document.getElementById('fluxCanvas');
+    const lCtx = fluxCanvas.getContext('2d');
+
+    function resizeBenchCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+      [fieldCanvas, oscCanvas, fluxCanvas].forEach(c => {
+        const r = c.getBoundingClientRect();
+        c.width = r.width * dpr;
+        c.height = r.height * dpr;
+      });
+    }
+    window.addEventListener('resize', resizeBenchCanvases);
+    resizeBenchCanvases();
+
+    // Analytical Flux Linkage Lambda(x) in Webers for magnet at position x (meters)
+    function computeFluxLinkage(xMeters) {
+      const a = 0.022; // effective coil radius (m)
+      const polarity = sim.flippedPoles ? -1 : 1;
+      const coreBoost = sim.ironCore ? 3.2 : 1.0;
+      const angleCos = Math.cos((sim.coilAngleDeg * Math.PI) / 180);
+      // Dipole-solenoid coupling bell function
+      const denom = Math.pow(xMeters * xMeters + a * a, 1.5);
+      const peakScale = 1.85e-8 * sim.br * sim.turns * coreBoost * angleCos * polarity;
+      return peakScale / denom;
+    }
+
+    // Spatial derivative dLambda / dx
+    function computeDFluxDx(xMeters) {
+      const eps = 0.0005;
+      return (computeFluxLinkage(xMeters + eps) - computeFluxLinkage(xMeters - eps)) / (2 * eps);
+    }
+
+    // 3D Projection helper
+    function project3D(x, y, z, W, H) {
+      const cosY = Math.cos(sim.yaw);
+      const sinY = Math.sin(sim.yaw);
+      const rx = x * cosY - z * sinY;
+      const rz = x * sinY + z * cosY;
+
+      const cosP = Math.cos(sim.pitch);
+      const sinP = Math.sin(sim.pitch);
+      const ry = y * cosP - rz * sinP;
+      const depth = y * sinP + rz * cosP + 0.42;
+
+      const scale = Math.min(W, H) * 1.32 * sim.zoom / Math.max(0.15, depth);
+      return {
+        px: W * 0.50 + rx * scale,
+        py: H * 0.52 - ry * scale,
+        depth,
+        scale
+      };
+    }
+
+    // Color scale for |B| field strength
+    function fieldStrengthColor(normB, alpha = 0.85) {
+      if (normB > 0.75) return `rgba(255, 234, 167, ${alpha})`;
+      if (normB > 0.45) return `rgba(85, 239, 196, ${alpha})`;
+      if (normB > 0.22) return `rgba(0, 206, 201, ${alpha})`;
+      return `rgba(116, 185, 255, ${alpha * 0.78})`;
+    }
+
+    // Render Fig. 1: 3D Coil, Magnet & Dipole Field Lines
+    function renderField3D() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = fieldCanvas.width / dpr;
+      const H = fieldCanvas.height / dpr;
+      fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Dark physics lab background
+      const bg = fCtx.createRadialGradient(W * 0.5, H * 0.5, 20, W * 0.5, H * 0.5, W * 0.7);
+      bg.addColorStop(0, '#222622');
+      bg.addColorStop(1, '#141614');
+      fCtx.fillStyle = bg;
+      fCtx.fillRect(0, 0, W, H);
+
+      // Draw Principal Axis Line & Ruler Ticks (-10 cm to +10 cm)
+      const pAxisL = project3D(-0.15, 0, 0, W, H);
+      const pAxisR = project3D(0.15, 0, 0, W, H);
+      fCtx.strokeStyle = 'rgba(255,255,255,0.16)';
+      fCtx.lineWidth = 1;
+      fCtx.beginPath();
+      fCtx.moveTo(pAxisL.px, pAxisL.py);
+      fCtx.lineTo(pAxisR.px, pAxisR.py);
+      fCtx.stroke();
+
+      fCtx.fillStyle = '#8b928a';
+      fCtx.font = '10px "JetBrains Mono", monospace';
+      [-0.10, -0.05, 0, 0.05, 0.10].forEach(xm => {
+        const pt = project3D(xm, -0.008, 0, W, H);
+        fCtx.fillText(`${Math.round(xm * 100)} cm`, pt.px - 14, pt.py + 14);
+      });
+
+      // Draw Copper Solenoid Coil at x = 0
+      const coilRadius = 0.036;
+      const coilWidth = 0.024;
+      const angRad = (sim.coilAngleDeg * Math.PI) / 180;
+
+      for (let ring = -3; ring <= 3; ring++) {
+        const localX = (ring / 3) * (coilWidth * 0.5);
+        fCtx.beginPath();
+        for (let i = 0; i <= 48; i++) {
+          const theta = (i / 48) * Math.PI * 2;
+          const cy = Math.cos(theta) * coilRadius;
+          const cz = Math.sin(theta) * coilRadius;
+          // Rotate by coil angle
+          const rx = localX * Math.cos(angRad) - cz * Math.sin(angRad);
+          const rz = localX * Math.sin(angRad) + cz * Math.cos(angRad);
+          const p = project3D(rx, cy, rz, W, H);
+          if (i === 0) fCtx.moveTo(p.px, p.py);
+          else fCtx.lineTo(p.px, p.py);
+        }
+        fCtx.strokeStyle = ring === 3 || ring === -3 ? '#d68958' : '#a85d31';
+        fCtx.lineWidth = 3.2;
+        fCtx.stroke();
+      }
+
+      // Inner bore shading glow proportional to induced current
+      const glowAlpha = Math.min(0.55, Math.abs(sim.currentAmps) * 1800);
+      if (glowAlpha > 0.02) {
+        const pCenter = project3D(0, 0, 0, W, H);
+        fCtx.beginPath();
+        fCtx.arc(pCenter.px, pCenter.py, 22, 0, Math.PI * 2);
+        fCtx.fillStyle = `rgba(85, 239, 196, ${glowAlpha})`;
+        fCtx.fill();
+      }
+
+      // Draw Dipole Magnetic Field Loops centered at sim.magnetX (`r = R0 * sin^2(theta)`)
+      const lobeShells = [0.048, 0.078, 0.115, 0.165];
+      const planes = [0, Math.PI * 0.5, -Math.PI * 0.25, Math.PI * 0.25];
+
+      planes.forEach((phi, pIdx) => {
+        lobeShells.forEach((rMax, sIdx) => {
+          for (const sign of [-1, 1]) {
+            fCtx.beginPath();
+            const steps = 44;
+            for (let i = 0; i <= steps; i++) {
+              const theta = (i / steps) * Math.PI;
+              const r = rMax * Math.pow(Math.sin(theta), 2);
+              const lx = sim.magnetX + r * Math.cos(theta);
+              const ly = sign * r * Math.sin(theta) * Math.cos(phi);
+              const lz = sign * r * Math.sin(theta) * Math.sin(phi);
+              const pt = project3D(lx, ly, lz, W, H);
+              if (i === 0) fCtx.moveTo(pt.px, pt.py);
+              else fCtx.lineTo(pt.px, pt.py);
+            }
+            const normStrength = 1 - sIdx / lobeShells.length;
+            fCtx.strokeStyle = fieldStrengthColor(normStrength, pIdx === 0 ? 0.92 : 0.42);
+            fCtx.lineWidth = pIdx === 0 ? 1.55 : 1.0;
+            fCtx.stroke();
+
+            // Draw directional arrowheads on main plane loops
+            if (pIdx === 0) {
+              const midTheta = Math.PI * 0.5;
+              const rMid = rMax;
+              const dTheta = sim.flippedPoles ? -0.08 : 0.08;
+              const p1 = project3D(
+                sim.magnetX + rMid * Math.cos(midTheta),
+                sign * rMid * Math.sin(midTheta),
+                0, W, H
+              );
+              const p2 = project3D(
+                sim.magnetX + rMid * Math.cos(midTheta + dTheta),
+                sign * rMid * Math.sin(midTheta + dTheta),
+                0, W, H
+              );
+              const ang = Math.atan2(p2.py - p1.py, p2.px - p1.px);
+              fCtx.fillStyle = '#dfe6e9';
+              fCtx.beginPath();
+              fCtx.moveTo(p1.px + Math.cos(ang) * 4, p1.py + Math.sin(ang) * 4);
+              fCtx.lineTo(p1.px + Math.cos(ang - 2.5) * 4, p1.py + Math.sin(ang - 2.5) * 4);
+              fCtx.lineTo(p1.px + Math.cos(ang + 2.5) * 4, p1.py + Math.sin(ang + 2.5) * 4);
+              fCtx.closePath();
+              fCtx.fill();
+            }
+          }
+        });
+      });
+
+      // Draw Cylindrical N/S Bar Magnet at sim.magnetX
+      const magHalfLen = 0.016;
+      const pLeft = project3D(sim.magnetX - magHalfLen, 0, 0, W, H);
+      const pMid = project3D(sim.magnetX, 0, 0, W, H);
+      const pRight = project3D(sim.magnetX + magHalfLen, 0, 0, W, H);
+
+      const leftCol = sim.flippedPoles ? '#d6604d' : '#74a9cf';
+      const rightCol = sim.flippedPoles ? '#74a9cf' : '#d6604d';
+
+      fCtx.lineCap = 'round';
+      fCtx.lineWidth = 18 * sim.zoom;
+      fCtx.strokeStyle = leftCol;
+      fCtx.beginPath();
+      fCtx.moveTo(pLeft.px, pLeft.py);
+      fCtx.lineTo(pMid.px, pMid.py);
+      fCtx.stroke();
+
+      fCtx.strokeStyle = rightCol;
+      fCtx.beginPath();
+      fCtx.moveTo(pMid.px, pMid.py);
+      fCtx.lineTo(pRight.px, pRight.py);
+      fCtx.stroke();
+      fCtx.lineCap = 'butt';
+    }
+
+    // Render Galvanometer Analog Needle Gauge
+    function renderGalvanometer() {
+      const W = galvCanvas.width;
+      const H = galvCanvas.height;
+      gCtx.clearRect(0, 0, W, H);
+
+      const cx = W * 0.5;
+      const cy = H - 8;
+      const rad = 64;
+
+      // Scale arc
+      gCtx.strokeStyle = '#9ca097';
+      gCtx.lineWidth = 1.4;
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, rad, -Math.PI * 0.82, -Math.PI * 0.18);
+      gCtx.stroke();
+
+      // Tick marks
+      for (let i = -5; i <= 5; i++) {
+        const ang = -Math.PI * 0.5 + (i / 5) * (Math.PI * 0.32);
+        const rIn = i % 5 === 0 ? rad - 8 : rad - 4;
+        gCtx.beginPath();
+        gCtx.moveTo(cx + Math.cos(ang) * rIn, cy + Math.sin(ang) * rIn);
+        gCtx.lineTo(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad);
+        gCtx.stroke();
+      }
+
+      gCtx.fillStyle = '#6c6e66';
+      gCtx.font = '9.5px "JetBrains Mono", monospace';
+      gCtx.textAlign = 'center';
+      gCtx.fillText('0', cx, cy - rad - 4);
+      gCtx.fillText('-2 mA', 30, H - 6);
+      gCtx.fillText('2 mA', W - 30, H - 6);
+
+      // Deflection angle from current (-2 mA to +2 mA)
+      const mA = sim.currentAmps * 1000;
+      const clamped = Math.max(-2, Math.min(2, mA * 2.5));
+      const needleAng = -Math.PI * 0.5 + (clamped / 2) * (Math.PI * 0.32);
+
+      gCtx.strokeStyle = '#2c2e2a';
+      gCtx.lineWidth = 2.0;
+      gCtx.beginPath();
+      gCtx.moveTo(cx, cy);
+      gCtx.lineTo(cx + Math.cos(needleAng) * (rad - 4), cy + Math.sin(needleAng) * (rad - 4));
+      gCtx.stroke();
+
+      gCtx.fillStyle = '#2c2e2a';
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+      gCtx.fill();
+    }
+
+    // Render Fig. 2: Real-Time Dual-Trace Oscilloscope
+    function renderOscilloscope() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = oscCanvas.width / dpr;
+      const H = oscCanvas.height / dpr;
+      oCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Dark green CRT screen
+      oCtx.fillStyle = '#141d17';
+      oCtx.fillRect(0, 0, W, H);
+
+      // Graticule grid
+      oCtx.strokeStyle = 'rgba(120, 170, 130, 0.14)';
+      oCtx.lineWidth = 1;
+      for (let x = 0; x < W; x += W / 8) {
+        oCtx.beginPath(); oCtx.moveTo(x, 0); oCtx.lineTo(x, H); oCtx.stroke();
+      }
+      for (let y = 0; y < H; y += H / 4) {
+        oCtx.beginPath(); oCtx.moveTo(0, y); oCtx.lineTo(W, y); oCtx.stroke();
+      }
+
+      const midY = H * 0.5;
+      // CH1 Induced EMF (Mint green)
+      oCtx.strokeStyle = '#55efc4';
+      oCtx.lineWidth = 1.8;
+      oCtx.beginPath();
+      sim.historyEmf.forEach((v, idx) => {
+        const x = (idx / (sim.historyEmf.length - 1)) * W;
+        const y = midY - v * (H * 28);
+        if (idx === 0) oCtx.moveTo(x, y);
+        else oCtx.lineTo(x, y);
+      });
+      oCtx.stroke();
+
+      // CH2 Induced Current (Amber)
+      oCtx.strokeStyle = 'rgba(253, 203, 110, 0.85)';
+      oCtx.lineWidth = 1.4;
+      oCtx.beginPath();
+      sim.historyCur.forEach((c, idx) => {
+        const x = (idx / (sim.historyCur.length - 1)) * W;
+        const y = midY - c * (H * 85);
+        if (idx === 0) oCtx.moveTo(x, y);
+        else oCtx.lineTo(x, y);
+      });
+      oCtx.stroke();
+    }
+
+    // Render Fig. 3: Flux Linkage Lambda(x) Curve & Live Tangent
+    function renderFluxCurve() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = fluxCanvas.width / dpr;
+      const H = fluxCanvas.height / dpr;
+      lCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      lCtx.fillStyle = '#f5f2ea';
+      lCtx.fillRect(0, 0, W, H);
+
+      // Grid lines
+      lCtx.strokeStyle = '#e0ddd3';
+      lCtx.lineWidth = 1;
+      for (let i = 1; i < 6; i++) {
+        const x = (i / 6) * W;
+        lCtx.beginPath(); lCtx.moveTo(x, 0); lCtx.lineTo(x, H); lCtx.stroke();
+      }
+      const midY = H * 0.58;
+      lCtx.beginPath(); lCtx.moveTo(0, midY); lCtx.lineTo(W, midY); lCtx.stroke();
+
+      // Plot Lambda(x) for x in [-0.15 .. +0.15]
+      const peakFlux = Math.abs(computeFluxLinkage(0)) || 1e-4;
+      lCtx.strokeStyle = '#2d3436';
+      lCtx.lineWidth = 1.6;
+      lCtx.beginPath();
+      for (let i = 0; i <= 80; i++) {
+        const u = i / 80;
+        const xm = (u - 0.5) * 0.30;
+        const fl = computeFluxLinkage(xm);
+        const px = u * W;
+        const py = midY - (fl / peakFlux) * (H * 0.42);
+        if (i === 0) lCtx.moveTo(px, py);
+        else lCtx.lineTo(px, py);
+      }
+      lCtx.stroke();
+
+      // Live magnet position dot on curve
+      const uNow = (sim.magnetX / 0.30) + 0.5;
+      const flNow = computeFluxLinkage(sim.magnetX);
+      const dotX = uNow * W;
+      const dotY = midY - (flNow / peakFlux) * (H * 0.42);
+
+      lCtx.strokeStyle = 'rgba(34, 153, 84, 0.45)';
+      lCtx.beginPath();
+      lCtx.moveTo(dotX, 0);
+      lCtx.lineTo(dotX, H);
+      lCtx.stroke();
+
+      lCtx.fillStyle = '#229954';
+      lCtx.beginPath();
+      lCtx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+      lCtx.fill();
+
+      // Readout text in top-left of Fig 3
+      const slopemWbPerM = (computeDFluxDx(sim.magnetX) * 1000).toFixed(1);
+      lCtx.fillStyle = '#229954';
+      lCtx.font = '10px "JetBrains Mono", monospace';
+      lCtx.fillText(`slope ${slopemWbPerM} mWb/m`, 10, 16);
+      lCtx.fillStyle = '#555';
+      lCtx.fillText(`EMF = -slope × ${sim.magnetV.toFixed(2)} m/s = ${(sim.emfVolts * 1000).toFixed(2)} mV`, 10, 30);
+    }
+
+    // Drag Magnet Directly in 3D Viewport
+    let draggingMagnet = false;
+    let prevClientX = 0;
+
+    fieldCanvas.addEventListener('mousedown', e => {
+      draggingMagnet = true;
+      sim.swinging = false;
+      document.getElementById('btnSwinging').classList.remove('active-dark');
+      prevClientX = e.clientX;
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!draggingMagnet) return;
+      const dxPx = e.clientX - prevClientX;
+      prevClientX = e.clientX;
+      const rect = fieldCanvas.getBoundingClientRect();
+      const dMeters = (dxPx / rect.width) * 0.28;
+      sim.magnetV = dMeters / 0.016;
+      sim.magnetX = Math.max(-0.14, Math.min(0.14, sim.magnetX + dMeters));
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (draggingMagnet) {
+        draggingMagnet = false;
+        sim.magnetV = 0;
+      }
+    });
+
+    fieldCanvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      sim.zoom = Math.max(0.65, Math.min(1.65, sim.zoom - e.deltaY * 0.0008));
+    }, { passive: false });
+
+    // UI Controls Wiring
+    document.querySelectorAll('[data-mat]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-mat]').forEach(b => b.classList.remove('active-green'));
+        btn.classList.add('active-green');
+        sim.br = parseFloat(btn.dataset.br);
+        document.getElementById('matDescLabel').textContent = btn.dataset.name;
+        document.getElementById('matBrLabel').textContent = `Br ${sim.br.toFixed(2)} T`;
+        document.getElementById('specBr').textContent = `${sim.br.toFixed(2)} T`;
+      });
+    });
+
+    document.querySelectorAll('[data-wire]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-wire]').forEach(b => b.classList.remove('active-copper'));
+        btn.classList.add('active-copper');
+        sim.wireR = parseFloat(btn.dataset.res) * (sim.turns / 200);
+        sim.wireName = btn.dataset.wire;
+        document.getElementById('wireDescLabel').textContent = btn.dataset.name;
+        document.getElementById('wireResLabel').textContent = `R ${sim.wireR.toFixed(2)} Ω`;
+        document.getElementById('specRes').textContent = `${sim.wireR.toFixed(2)} Ω + 1 Ω meter`;
+      });
+    });
+
+    document.getElementById('btnSwinging').addEventListener('click', e => {
+      sim.swinging = !sim.swinging;
+      e.target.classList.toggle('active-dark', sim.swinging);
+    });
+
+    document.getElementById('btnFlipPoles').addEventListener('click', e => {
+      sim.flippedPoles = !sim.flippedPoles;
+      e.target.classList.toggle('active-dark', sim.flippedPoles);
+    });
+
+    document.getElementById('swingSpeedSlider').addEventListener('input', e => {
+      sim.swingSpeed = parseFloat(e.target.value);
+      document.getElementById('swingSpeedLabel').textContent = `${sim.swingSpeed.toFixed(2)} m/s`;
+    });
+
+    document.getElementById('turnsSlider').addEventListener('input', e => {
+      sim.turns = parseInt(e.target.value, 10);
+      document.getElementById('turnsLabel').textContent = sim.turns;
+      document.getElementById('specCoil').textContent = `bore 30 mm, ${sim.turns} turns, 10 layers`;
+      document.getElementById('readCoilMeta').textContent = `${sim.turns} turns, ${sim.wireR.toFixed(2)} Ω`;
+    });
+
+    document.getElementById('coilAngleSlider').addEventListener('input', e => {
+      sim.coilAngleDeg = parseInt(e.target.value, 10);
+      document.getElementById('coilAngleLabel').textContent = `${sim.coilAngleDeg}°`;
+    });
+
+    document.getElementById('btnCoreAir').addEventListener('click', () => {
+      sim.ironCore = false;
+      document.getElementById('btnCoreAir').classList.add('active-dark');
+      document.getElementById('btnCoreIron').classList.remove('active-dark');
+    });
+
+    document.getElementById('btnCoreIron').addEventListener('click', () => {
+      sim.ironCore = true;
+      document.getElementById('btnCoreIron').classList.add('active-dark');
+      document.getElementById('btnCoreAir').classList.remove('active-dark');
+    });
+
+    document.getElementById('batterySlider').addEventListener('input', e => {
+      sim.batteryV = parseFloat(e.target.value);
+      document.getElementById('batteryLabel').textContent = sim.batteryV === 0 ? 'off' : `${sim.batteryV > 0 ? '+' : ''}${sim.batteryV} V`;
+    });
+
+    // Camera Presets
+    document.querySelectorAll('[data-cam]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-cam]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.cam;
+        if (mode === 'angled') { sim.yaw = -0.46; sim.pitch = 0.32; }
+        else if (mode === 'side') { sim.yaw = 0; sim.pitch = 0; }
+        else if (mode === 'top') { sim.yaw = 0; sim.pitch = 1.48; }
+        else if (mode === 'axis') { sim.yaw = -1.52; sim.pitch = 0.08; }
+      });
+    });
+
+    // Main Physics & Render Loop
+    function stepPhysics() {
+      const dt = 0.016;
+      sim.t += dt;
+
+      if (sim.swinging) {
+        const omega = (sim.swingSpeed / 0.09);
+        sim.magnetX = 0.09 * Math.sin(sim.t * omega);
+        sim.magnetV = 0.09 * omega * Math.cos(sim.t * omega);
+      }
+
+      const dLambdaDx = computeDFluxDx(sim.magnetX);
+      sim.fluxLinkageWb = computeFluxLinkage(sim.magnetX);
+      sim.emfVolts = -dLambdaDx * sim.magnetV + sim.batteryV * 0.001;
+      const totalR = sim.wireR + 1.0;
+      sim.currentAmps = sim.emfVolts / totalR;
+
+      sim.historyEmf.push(sim.emfVolts);
+      sim.historyEmf.shift();
+      sim.historyCur.push(sim.currentAmps);
+      sim.historyCur.shift();
+
+      // Update Digital Readouts
+      const emfMicro = sim.emfVolts * 1e6;
+      document.getElementById('readEmf').textContent =
+        Math.abs(emfMicro) >= 1000 ? `${(emfMicro / 1000).toFixed(2)} mV` : `${Math.round(emfMicro)} µV`;
+
+      const curMicro = sim.currentAmps * 1e6;
+      document.getElementById('readCurrent').textContent =
+        Math.abs(curMicro) >= 1000 ? `${(curMicro / 1000).toFixed(2)} mA` : `${Math.round(curMicro)} µA`;
+
+      document.getElementById('readFlux').textContent = `flux ${Math.round(Math.abs(sim.fluxLinkageWb) * 1e6)} µWb`;
+      const bCenterMicroT = (4 * Math.PI * 1e-7 * sim.turns * sim.currentAmps / 0.038) * 1e6;
+      document.getElementById('readBCoil').textContent = `${bCenterMicroT.toFixed(2)} µT`;
+
+      const lenzForce = -dLambdaDx * sim.currentAmps;
+      document.getElementById('readForce').textContent =
+        Math.abs(lenzForce) < 1e-4 ? '0 N' : `${(lenzForce * 1000).toFixed(2)} mN`;
+
+      document.getElementById('simClockLabel').textContent = `t ${sim.t.toFixed(1)} s  step 2.1 ms`;
+      document.getElementById('liveStatusNote').textContent =
+        Math.abs(sim.magnetX) > 0.065
+          ? 'Magnet far away, so the flux barely changes'
+          : 'Magnet passing coil throat — peak flux rate of change';
+
+      renderField3D();
+      renderGalvanometer();
+      renderOscilloscope();
+      renderFluxCurve();
+      requestAnimationFrame(stepPhysics);
+    }
+
+    stepPhysics();
+  </script>
+</body>
+</html>

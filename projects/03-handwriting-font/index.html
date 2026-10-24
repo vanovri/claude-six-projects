@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>my notes → a font — 120 Pages of Handwritten Notes to Working Font</title>
+  <style>
+    :root {
+      --paper: #f7f8fa;
+      --rule-line: #e4ebf2;
+      --margin-line: #ebadad;
+      --ink-blue: #1e2d6e;
+      --ink-accent: #d45d48;
+      --text-body: #4b5563;
+      --text-muted: #7c8594;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--paper);
+      color: var(--text-body);
+      background-image:
+        linear-gradient(90deg, transparent 84px, var(--margin-line) 84px, var(--margin-line) 85.5px, transparent 85.5px),
+        repeating-linear-gradient(0deg, var(--paper) 0px, var(--paper) 31px, var(--rule-line) 31px, var(--rule-line) 32px);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(247, 248, 250, 0.9);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--rule-line);
+      padding: 10px 32px 10px 108px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-back {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-blue);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(30, 45, 110, 0.25);
+      background: #fff;
+    }
+
+    .nav-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .nav-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      border: 1px solid #d1d9e4;
+      background: #fff;
+      color: #4b5563;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .nav-pill:hover, .nav-pill.active {
+      background: var(--ink-blue);
+      color: #fff;
+      border-color: var(--ink-blue);
+    }
+
+    .notebook-container {
+      max-width: 1040px;
+      padding: 40px 36px 96px 112px;
+      margin: 0 auto;
+    }
+
+    .step-section {
+      margin-bottom: 68px;
+      scroll-margin-top: 64px;
+    }
+
+    .step-kicker {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-accent);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .meta-kicker {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .hand-heading-svg {
+      display: block;
+      margin: 6px 0 12px 0;
+      overflow: visible;
+    }
+
+    .section-desc {
+      font-size: 16px;
+      color: #4b5563;
+      max-width: 680px;
+      margin-bottom: 22px;
+    }
+
+    /* 120-Page Thumbnail Matrix (matching frame_04_c.jpg) */
+    .pages-grid {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.65);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #dde3ec;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+
+    .page-thumb {
+      aspect-ratio: 0.76;
+      background: linear-gradient(145deg, #b8bcc8, #9fa5b5);
+      border-radius: 2px;
+      border: 1px solid #6b7280;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.15s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .page-thumb:hover {
+      transform: scale(1.22);
+      z-index: 5;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    .page-thumb.has-margin::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #7c2d3a;
+    }
+
+    .page-inspector-bar {
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-blue);
+      background: #eef2f8;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Step 1: Separate pen from paper card (matching frame_04_d.jpg) */
+    .separation-card {
+      background: #ffffff;
+      border: 1px solid #d8e0eb;
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+      margin-bottom: 14px;
+    }
+
+    #sepCanvas {
+      width: 100%;
+      height: 155px;
+      display: block;
+      border-radius: 4px;
+    }
+
+    .pill-switcher {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stage-pill {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid #d0d7e2;
+      background: #eef2f6;
+      color: #4b5563;
+      cursor: pointer;
+    }
+
+    .stage-pill.active {
+      background: var(--ink-blue);
+      color: #fff;
+      border-color: var(--ink-blue);
+    }
+
+    /* Step 2: Read my handwriting word crops (matching frame_04_f.jpg) */
+    .words-match-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px 36px;
+      margin-bottom: 24px;
+    }
+
+    .word-match-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .word-crop-box {
+      background: #fff;
+      border: 1px solid #dce3ed;
+      border-radius: 6px;
+      padding: 6px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      cursor: pointer;
+    }
+
+    .word-crop-box:hover {
+      border-color: var(--ink-blue);
+    }
+
+    .word-arrow {
+      color: #9ca3af;
+      font-family: var(--font-mono);
+    }
+
+    .word-decoded {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      color: #1f2937;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 42px;
+      align-items: baseline;
+      margin-top: 10px;
+    }
+
+    .stat-pair {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    /* Step 4: Trace the pen, then redraw it (matching frame_04_g.jpg) */
+    .trace-triptych {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 14px;
+      max-width: 680px;
+    }
+
+    .trace-panel {
+      background: #fff;
+      border: 1px solid #dce3ed;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+
+    .trace-caption {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    .glyph-picker-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .glyph-btn {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .glyph-btn.active {
+      background: var(--ink-blue);
+      color: #fff;
+      border-color: var(--ink-blue);
+    }
+
+    /* Step 5: Keep the quirks (matching frame_04_h.jpg) */
+    .quirks-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px 18px;
+      max-width: 780px;
+      margin-top: 14px;
+    }
+
+    .quirk-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 10px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .quirk-card.enabled {
+      border-color: var(--ink-blue);
+      background: #fff;
+      box-shadow: 0 3px 10px rgba(30, 45, 110, 0.08);
+    }
+
+    .quirk-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .quirk-label {
+      font-size: 13px;
+      color: #374151;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    /* Step 6: Same sentence notebook vs font + Live Typewriter (matching frame_04_i.jpg) */
+    .notebook-photo-strip {
+      background: linear-gradient(90deg, #b8bfd0 0%, #cfd5e4 50%, #c1c8d8 97%, #6e1d2a 97.5%);
+      border-radius: 6px;
+      padding: 14px 20px;
+      border: 1px solid #9ba3b5;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.12);
+      margin-bottom: 24px;
+    }
+
+    .live-typewriter-box {
+      background: #ffffff;
+      border: 2px solid var(--ink-blue);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 24px rgba(30, 45, 110, 0.08);
+      margin-top: 22px;
+    }
+
+    .typewriter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    #customTextInput {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+
+    .download-btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--ink-blue);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .download-btn:hover {
+      background: #152257;
+    }
+
+    @media (max-width: 760px) {
+      .notebook-container {
+        padding-left: 24px;
+      }
+      .top-nav {
+        padding-left: 24px;
+      }
+      .pages-grid {
+        grid-template-columns: repeat(10, 1fr);
+      }
+      .words-match-grid, .quirks-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .trace-triptych {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="../../index.html" class="nav-back">← All 6 Projects</a>
+    <div class="nav-pills">
+      <a href="#sec-intro" class="nav-pill active">Intro · 120 Pages</a>
+      <a href="#sec-step1" class="nav-pill">1. Separate Ink</a>
+      <a href="#sec-step2" class="nav-pill">2. Read Strokes</a>
+      <a href="#sec-step4" class="nav-pill">4. Trace Pen</a>
+      <a href="#sec-step5" class="nav-pill">5. Keep Quirks</a>
+      <a href="#sec-step6" class="nav-pill">6. Live Font Studio</a>
+    </div>
+  </nav>
+
+  <main class="notebook-container">
+    <!-- HERO / INTRO (matching frame_04_b.jpg & frame_04_c.jpg) -->
+    <section class="step-section" id="sec-intro">
+      <div class="meta-kicker">CLAUDE OPUS 5.5  ·  CLAUDE CODE  ·  ONE PROMPT  ·  $13.68 API COST</div>
+      <div id="heroTitleMount"></div>
+      <p class="section-desc">
+        I gave Claude my handwritten college notes.<br />
+        It gave me back my handwriting, as a real font.
+      </p>
+
+      <div style="margin-top:34px">
+        <div id="pagesTitleMount"></div>
+        <p class="section-desc" style="margin-bottom:14px">
+          Computer Networks, the full syllabus. Photographed on a phone, straight from the notebook.
+        </p>
+        <div class="pages-grid" id="pagesGrid"></div>
+        <div class="page-inspector-bar" id="pageInspectorBar">
+          <span>📄 Page 005 / 120 selected — Topic: OSI 7-Layer Conceptual Model & TCP Handshake</span>
+          <span>24 words extracted · 198 glyphs matched</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 1 OF 6: Separate the pen from the paper (matching frame_04_d.jpg) -->
+    <section class="step-section" id="sec-step1">
+      <div class="step-kicker">STEP 1 OF 6</div>
+      <div id="step1TitleMount"></div>
+      <p class="section-desc">
+        Ruled lines, the red margin and ink bleeding through from the back of the page: all removed.
+      </p>
+
+      <div class="separation-card">
+        <canvas id="sepCanvas" width="820" height="155"></canvas>
+      </div>
+
+      <div class="pill-switcher">
+        <button class="stage-pill" data-sep="1">1. phone photo</button>
+        <button class="stage-pill active" data-sep="2">2. blue-ink signal</button>
+        <button class="stage-pill" data-sep="3">3. clean ink</button>
+      </div>
+    </section>
+
+    <!-- STEP 2 OF 6: Read my handwriting (matching frame_04_f.jpg) -->
+    <section class="step-section" id="sec-step2">
+      <div class="step-kicker">STEP 2 OF 6</div>
+      <div id="step2TitleMount"></div>
+      <p class="section-desc">
+        Claude read the words in the photos, then matched every pen stroke to a letter.
+      </p>
+
+      <div class="words-match-grid" id="wordsMatchGrid"></div>
+
+      <div class="stats-row">
+        <div class="stat-pair">
+          <span id="stat704Mount"></span>
+          <span style="color:#6b7280;font-size:15px">words read</span>
+        </div>
+        <div class="stat-pair">
+          <span id="stat2479Mount"></span>
+          <span style="color:#6b7280;font-size:15px">letters found</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 OF 6: Trace the pen, then redraw it (matching frame_04_g.jpg) -->
+    <section class="step-section" id="sec-step4">
+      <div class="step-kicker">STEP 4 OF 6</div>
+      <div id="step4TitleMount"></div>
+      <p class="section-desc">
+        Photos blur a ballpoint line, so each letter becomes the path the pen took.
+      </p>
+
+      <div class="glyph-picker-row" id="glyphPickerRow"></div>
+
+      <div class="trace-triptych">
+        <div>
+          <div class="trace-panel">
+            <canvas id="tracePhotoCanvas" width="140" height="175"></canvas>
+          </div>
+          <div class="trace-caption">photo · 34 px tall</div>
+        </div>
+        <div style="color:var(--ink-accent);font-family:var(--font-mono);font-size:18px">→</div>
+        <div>
+          <div class="trace-panel">
+            <canvas id="traceShapeCanvas" width="140" height="175"></canvas>
+          </div>
+          <div class="trace-caption">ink shape</div>
+        </div>
+        <div style="color:var(--ink-accent);font-family:var(--font-mono);font-size:18px">→</div>
+        <div>
+          <div class="trace-panel">
+            <canvas id="tracePathCanvas" width="140" height="175"></canvas>
+          </div>
+          <div class="trace-caption">pen path (centerline spline)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 OF 6: Keep the quirks (matching frame_04_h.jpg) -->
+    <section class="step-section" id="sec-step5">
+      <div class="step-kicker">STEP 5 OF 6</div>
+      <div id="step5TitleMount"></div>
+      <p class="section-desc">
+        The habits that make it my handwriting stay in the font. (Click any quirk to toggle it in the live font engine below!)
+      </p>
+
+      <div class="quirks-grid" id="quirksGrid"></div>
+    </section>
+
+    <!-- STEP 6 OF 6: Same sentence: notebook vs. font + Live Typewriter (matching frame_04_i.jpg) -->
+    <section class="step-section" id="sec-step6">
+      <div id="step6TitleMount"></div>
+
+      <div class="step-kicker" style="margin-top:16px">MY NOTEBOOK · PAGE 5</div>
+      <div class="notebook-photo-strip">
+        <div id="notebookOrigMount"></div>
+      </div>
+
+      <div class="step-kicker">TYPED IN HARSHPREET HAND</div>
+      <div id="typedComparisonMount" style="margin-bottom:28px"></div>
+
+      <!-- Interactive Live Typewriter & Working Font Exporter -->
+      <div class="live-typewriter-box">
+        <div class="typewriter-header">
+          <div>
+            <strong style="color:var(--ink-blue);font-size:15px">✍️ Interactive Handwriting Font Studio (Harshpreet Hand)</strong>
+            <div style="font-size:12px;color:#64748b">Type anything below — try words with <code>i</code>, <code>t</code>, <code>l</code>, <code>r</code>, <code>d</code>, <code>g</code>, <code>2</code>, <code>&amp;</code>, or <code>-&gt;</code>!</div>
+          </div>
+          <button class="download-btn" id="btnDownloadFont">⬇ Download Working .SVG Font File</button>
+        </div>
+
+        <input
+          type="text"
+          id="customTextInput"
+          value="my notes -> a font! 120 pages & 2,479 letters in 1 prompt ($13.68)."
+          placeholder="Type any sentence to render in Harshpreet Hand..."
+        />
+
+        <div id="liveTypedOutput" style="min-height:92px;padding:8px 0"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // =========================================================================
+    // Harshpreet Hand Vector Pen-Stroke Font Engine (matching Slide 4 quirks)
+    // =========================================================================
+    const activeQuirks = {
+      ringI: true,
+      loopL: true,
+      loopR: true,
+      curlD: true,
+      halfT: true,
+      curl2: true,
+      crossAmp: true,
+      arrowLig: true
+    };
+
+    // Custom single-line stroke paths in a [0..24] x [0..36] glyph box (baseline = 26)
+    function getGlyphPaths(ch) {
+      switch (ch) {
+        case 'a':
+          return ['M 17 15 C 8 12, 4 19, 6 24 C 8 28, 15 26, 17 20 L 17 14 C 17 21, 18 25, 21 26'];
+        case 'b':
+          return ['M 6 4 L 6 26 C 6 17, 18 14, 18 21 C 18 27, 8 27, 6 25'];
+        case 'c':
+          return ['M 17 16 C 10 13, 5 18, 6 23 C 7 27, 13 27, 18 25'];
+        case 'd':
+          return activeQuirks.curlD
+            ? ['M 18 4 L 18 22 C 18 28, 7 28, 7 21 C 7 15, 16 14, 18 19']
+            : ['M 18 4 L 18 26', 'M 18 17 C 8 14, 6 26, 18 25'];
+        case 'e':
+          return ['M 6 20 L 17 19 C 18 14, 7 13, 6 21 C 5 26, 12 27, 18 25'];
+        case 'f':
+          return ['M 18 6 C 13 3, 10 8, 11 26', 'M 6 16 L 17 16'];
+        case 'g':
+          return ['M 17 16 C 8 13, 5 23, 13 24 C 16 24, 17 20, 17 16 L 17 30 C 17 36, 7 36, 8 30 C 9 26, 15 26, 18 28'];
+        case 'h':
+          return ['M 6 4 L 6 26 C 7 17, 16 15, 17 21 L 17 26'];
+        case 'i':
+          return activeQuirks.ringI
+            ? ['M 11 15 L 10 26', 'M 12 7 C 9 7, 8 11, 12 11 C 15 11, 15 7, 12 7']
+            : ['M 11 15 L 10 26', 'M 11 9 L 11 10.5'];
+        case 'j':
+          return activeQuirks.ringI
+            ? ['M 13 15 L 13 31 C 13 35, 6 35, 6 31', 'M 13 7 C 10 7, 9 11, 13 11 C 16 11, 16 7, 13 7']
+            : ['M 13 15 L 13 31 C 13 35, 6 35, 6 31', 'M 13 9 L 13 10.5'];
+        case 'k':
+          return ['M 6 4 L 6 26', 'M 17 14 C 11 18, 8 20, 6 20 C 10 20, 14 23, 18 26'];
+        case 'l':
+          return activeQuirks.loopL
+            ? ['M 8 26 C 14 18, 17 6, 12 5 C 8 5, 8 19, 15 26']
+            : ['M 11 4 L 11 26'];
+        case 'm':
+          return ['M 4 16 L 4 25 C 4 16, 11 15, 12 24 C 12 16, 19 15, 20 23 C 20 26, 21 26, 22 25'];
+        case 'n':
+          return ['M 6 15 L 6 25 C 6 16, 16 14, 17 21 L 17 26'];
+        case 'o':
+          return ['M 12 15 C 6 15, 5 26, 12 26 C 19 26, 19 15, 12 15'];
+        case 'p':
+          return ['M 7 15 L 7 34', 'M 7 17 C 18 13, 19 26, 7 25'];
+        case 'q':
+          return ['M 17 16 C 7 13, 6 25, 17 24 L 17 34 L 21 31'];
+        case 'r':
+          return activeQuirks.loopR
+            ? ['M 8 14 L 9 25 C 10 27, 6 25, 7 21 C 9 18, 14 18, 18 18']
+            : ['M 8 15 L 8 26 C 8 18, 13 15, 18 16'];
+        case 's':
+          return ['M 16 15 C 9 14, 7 18, 12 20 C 18 22, 16 27, 7 25'];
+        case 't':
+          return activeQuirks.halfT
+            ? ['M 9 5 L 10 26', 'M 10 15 C 13 14, 17 15, 18 16']
+            : ['M 10 5 L 10 26', 'M 5 15 L 16 15'];
+        case 'u':
+          return ['M 6 15 C 5 25, 14 27, 17 19 L 17 15 L 17 26'];
+        case 'v':
+          return ['M 5 15 L 12 26 L 19 15'];
+        case 'w':
+          return ['M 4 15 C 4 25, 10 26, 12 19 C 14 26, 20 25, 20 15'];
+        case 'x':
+          return ['M 6 15 L 18 26', 'M 17 15 L 6 26'];
+        case 'y':
+          return ['M 6 15 C 6 23, 13 24, 16 18 L 16 15 L 17 31 C 17 36, 8 36, 8 30'];
+        case 'z':
+          return ['M 6 15 L 18 15 L 6 26 L 18 26'];
+        case 'A':
+          return ['M 5 26 L 12 6 L 19 26', 'M 7 19 L 17 19'];
+        case 'C':
+          return ['M 19 8 C 8 6, 4 15, 7 23 C 9 27, 15 27, 20 24'];
+        case 'F':
+          return ['M 7 6 L 7 26', 'M 7 6 L 19 6', 'M 7 15 L 16 15'];
+        case 'H':
+          return ['M 6 6 L 6 26', 'M 18 6 L 18 26', 'M 6 16 L 18 16'];
+        case 'I':
+          return ['M 7 6 L 17 6', 'M 12 6 L 12 26', 'M 7 26 L 17 26'];
+        case 'J':
+          return ['M 8 6 L 18 6', 'M 14 6 L 14 22 C 14 27, 6 27, 6 21'];
+        case 'K':
+          return ['M 6 6 L 6 26', 'M 19 8 C 12 12, 8 16, 6 16 C 10 16, 15 21, 19 26'];
+        case 'M':
+          return ['M 4 26 L 6 7 L 12 19 L 18 7 L 20 26'];
+        case 'O':
+          return ['M 12 6 C 4 6, 4 26, 12 26 C 20 26, 20 6, 12 6'];
+        case 'Q':
+          return ['M 12 6 C 4 6, 4 26, 12 26 C 20 26, 20 6, 12 6', 'M 13 21 L 20 28'];
+        case 'R':
+          return ['M 6 6 L 6 26', 'M 6 6 C 19 5, 19 16, 6 16 C 12 17, 16 22, 19 26'];
+        case 'S':
+          return ['M 18 8 C 10 5, 5 11, 12 15 C 20 19, 18 27, 6 25'];
+        case '1':
+          return ['M 11 7 L 10 26'];
+        case '2':
+          return activeQuirks.curl2
+            ? ['M 7 11 C 7 5, 17 5, 16 14 C 15 21, 11 25, 6 23 C 10 24, 14 26, 17 28']
+            : ['M 6 10 C 8 5, 18 6, 16 14 L 6 26 L 18 26'];
+        case '3':
+          return ['M 7 8 C 16 6, 17 15, 10 16 C 18 16, 18 27, 7 25'];
+        case '4':
+          return ['M 8 7 L 7 18 L 19 18', 'M 16 8 L 16 26'];
+        case '6':
+          return ['M 16 7 C 7 11, 5 26, 13 26 C 19 26, 18 17, 11 18 C 8 18, 7 20, 7 22'];
+        case '7':
+          return ['M 5 8 L 18 8 L 10 26'];
+        case '8':
+          return ['M 12 7 C 6 7, 6 15, 12 16 C 18 17, 18 26, 12 26 C 6 26, 6 17, 12 16 C 18 15, 18 7, 12 7'];
+        case '9':
+          return ['M 17 13 C 17 6, 6 6, 7 13 C 8 18, 16 17, 17 13 L 16 26'];
+        case '0':
+          return ['M 12 7 C 5 7, 5 26, 12 26 C 19 26, 19 7, 12 7'];
+        case '&':
+          return activeQuirks.crossAmp
+            ? ['M 18 23 L 7 26 C 12 18, 15 5, 10 5 C 6 5, 8 19, 17 26']
+            : ['M 18 25 C 8 18, 7 6, 12 6 C 16 6, 14 14, 7 19 C 4 22, 8 27, 18 22'];
+        case '.':
+          return ['M 10 25 C 10 24, 12 24, 12 25 C 12 26, 10 26, 10 25'];
+        case ',':
+          return ['M 11 24 C 12 27, 9 30, 7 32'];
+        case ':':
+          return ['M 11 15 C 11 14, 12 14, 12 15', 'M 11 25 C 11 24, 12 24, 12 25'];
+        case '$':
+          return ['M 16 9 C 9 7, 6 12, 12 15 C 18 18, 16 24, 7 23', 'M 12 4 L 12 28'];
+        case '(':
+          return ['M 15 5 C 8 12, 8 22, 15 29'];
+        case ')':
+          return ['M 9 5 C 16 12, 16 22, 9 29'];
+        case '!':
+          return ['M 11 6 L 11 20', 'M 11 25 C 10 25, 12 25, 11 26'];
+        case '→':
+          return ['M 2 18 C 12 17, 22 15, 29 15', 'M 22 9 C 26 12, 31 15, 28 21'];
+        default:
+          return [];
+      }
+    }
+
+    // Render any string into an SVG using Harshpreet Hand vector glyphs
+    function renderHandwritingSVG(text, scale = 1.0, maxWidth = 860) {
+      const processed = activeQuirks.arrowLig ? text.replace(/->/g, '→') : text;
+      const lines = [];
+      let curLine = [];
+      let curX = 0;
+
+      const words = processed.split(' ');
+      for (const word of words) {
+        const wLen = word.length * 19 * scale;
+        if (curX + wLen > maxWidth && curLine.length > 0) {
+          lines.push(curLine.join(' '));
+          curLine = [word];
+          curX = wLen + 14 * scale;
+        } else {
+          curLine.push(word);
+          curX += wLen + 14 * scale;
+        }
+      }
+      if (curLine.length > 0) lines.push(curLine.join(' '));
+
+      const lineH = 44 * scale;
+      const totalH = lines.length * lineH + 12 * scale;
+      let svgContent = '';
+
+      lines.forEach((line, lineIdx) => {
+        let xCursor = 4;
+        const yOffset = lineIdx * lineH;
+
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === ' ') {
+            xCursor += 14 * scale;
+            continue;
+          }
+          const isArrow = ch === '→';
+          const paths = getGlyphPaths(ch).length ? getGlyphPaths(ch) : getGlyphPaths(ch.toLowerCase());
+          const strokeCol = isArrow ? '#d45d48' : '#1e2d6e';
+          const strokeW = (isArrow ? 2.6 : 2.15) * Math.pow(scale, 0.25);
+
+          paths.forEach(d => {
+            svgContent += `<g transform="translate(${xCursor.toFixed(1)}, ${yOffset.toFixed(1)}) scale(${scale})">
+              <path d="${d}" fill="none" stroke="${strokeCol}" stroke-width="${(strokeW / scale).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" />
+            </g>`;
+          });
+
+          xCursor += (isArrow ? 36 : 18.5) * scale;
+        }
+      });
+
+      return `<svg class="hand-heading-svg" width="100%" height="${totalH}" viewBox="0 0 ${maxWidth} ${totalH}">${svgContent}</svg>`;
+    }
+
+    // Mount all handwritten section titles matching Slide 4 frames
+    function mountAllTitles() {
+      document.getElementById('heroTitleMount').innerHTML = renderHandwritingSVG('my notes -> a font', 1.85, 820);
+      document.getElementById('pagesTitleMount').innerHTML = renderHandwritingSVG('120 pages of notes', 1.35, 820);
+      document.getElementById('step1TitleMount').innerHTML = renderHandwritingSVG('Separate the pen from the paper', 1.35, 820);
+      document.getElementById('step2TitleMount').innerHTML = renderHandwritingSVG('Read my handwriting', 1.35, 820);
+      document.getElementById('stat704Mount').innerHTML = renderHandwritingSVG('704', 1.35, 130);
+      document.getElementById('stat2479Mount').innerHTML = renderHandwritingSVG('2,479', 1.35, 190);
+      document.getElementById('step4TitleMount').innerHTML = renderHandwritingSVG('Trace the pen, then redraw it', 1.35, 820);
+      document.getElementById('step5TitleMount').innerHTML = renderHandwritingSVG('Keep the quirks', 1.35, 820);
+      document.getElementById('step6TitleMount').innerHTML = renderHandwritingSVG('Same sentence: notebook vs. font', 1.35, 820);
+
+      const sampleSentence = 'A conceptual model that describes how data is communicated over a network. It is a 7 layer model. First introduced in 1970s. Made by ISO.';
+      document.getElementById('notebookOrigMount').innerHTML = renderHandwritingSVG(sampleSentence, 0.86, 820);
+      document.getElementById('typedComparisonMount').innerHTML = renderHandwritingSVG(sampleSentence, 0.96, 840);
+      updateLiveTyped();
+    }
+
+    // 1. Build 120-page grid (6 rows x 20 columns = 120 pages)
+    const pagesGrid = document.getElementById('pagesGrid');
+    const topics = [
+      'OSI 7-Layer Conceptual Model',
+      'TCP 3-Way Handshake & SYN/ACK',
+      'UDP vs TCP Packet Header Layout',
+      'CSMA/CD Collision Detection & Backoff',
+      'BGP Autonomous System Routing',
+      'DNS Recursive Resolution & Caching',
+      'Sliding Window Flow Control',
+      'Dijkstra Shortest Path OSPF'
+    ];
+    for (let p = 1; p <= 120; p++) {
+      const cell = document.createElement('div');
+      cell.className = 'page-thumb' + (p % 3 === 0 ? ' has-margin' : '');
+      cell.style.filter = `brightness(${0.86 + (Math.sin(p * 1.7) * 0.14).toFixed(2)})`;
+      cell.title = `Notebook Page ${p} of 120`;
+      cell.addEventListener('click', () => {
+        const topic = topics[p % topics.length];
+        document.getElementById('pageInspectorBar').innerHTML =
+          `<span>📄 Page ${String(p).padStart(3, '0')} / 120 selected — Topic: ${topic}</span>` +
+          `<span>${18 + (p % 14)} words extracted · ${140 + (p * 7) % 90} glyphs matched</span>`;
+      });
+      pagesGrid.appendChild(cell);
+    }
+
+    // 2. Step 1 Canvas: Separate pen from paper (1. phone photo, 2. blue-ink signal, 3. clean ink)
+    let currentSepStage = 2;
+    const sepCanvas = document.getElementById('sepCanvas');
+    const sepCtx = sepCanvas.getContext('2d');
+
+    function drawSeparationStage(stage) {
+      const W = sepCanvas.width;
+      const H = sepCanvas.height;
+      sepCtx.clearRect(0, 0, W, H);
+
+      if (stage === 1) {
+        // 1. Phone photo: gray uneven phone camera lighting, dark ruled lines, red margin, backside bleed
+        const grad = sepCtx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0, '#d5dae4');
+        grad.addColorStop(0.6, '#eaedf3');
+        grad.addColorStop(1, '#c5cbd8');
+        sepCtx.fillStyle = grad;
+        sepCtx.fillRect(0, 0, W, H);
+
+        // Bleed-through ghosts
+        sepCtx.fillStyle = 'rgba(90, 100, 130, 0.12)';
+        sepCtx.font = 'italic 20px serif';
+        sepCtx.fillText('3-way handshake SYN -> SYN-ACK -> ACK packet loss window', 90, 52);
+        sepCtx.fillText('Physical -> DataLink -> Network -> Transport -> Session', 140, 115);
+
+        // Heavy ruled lines & red margin
+        sepCtx.strokeStyle = '#8b95a7';
+        sepCtx.lineWidth = 1.4;
+        [68, 128].forEach(y => {
+          sepCtx.beginPath(); sepCtx.moveTo(0, y); sepCtx.lineTo(W, y); sepCtx.stroke();
+        });
+        sepCtx.strokeStyle = '#b85d69';
+        sepCtx.lineWidth = 2;
+        sepCtx.beginPath(); sepCtx.moveTo(42, 0); sepCtx.lineTo(42, H); sepCtx.stroke();
+      } else if (stage === 2) {
+        // 2. Blue-ink signal: crisp paper, faint guidelines showing ink channel isolation
+        sepCtx.fillStyle = '#ffffff';
+        sepCtx.fillRect(0, 0, W, H);
+        sepCtx.strokeStyle = '#9aa1ad';
+        sepCtx.lineWidth = 1;
+        [68, 128].forEach(y => {
+          sepCtx.beginPath(); sepCtx.moveTo(14, y); sepCtx.lineTo(W - 14, y); sepCtx.stroke();
+        });
+      } else {
+        // 3. Clean ink: pure isolated pen paths on white background
+        sepCtx.fillStyle = '#ffffff';
+        sepCtx.fillRect(0, 0, W, H);
+      }
+
+      // Draw the handwritten notes from frame_04_d.jpg
+      sepCtx.fillStyle = stage === 1 ? '#1a2542' : '#1e2d6e';
+      sepCtx.font = '600 19px "Comic Sans MS", "Bradley Hand", cursive';
+      sepCtx.fillText('Advantages .', 54, 58);
+      sepCtx.fillText('•  Easy to Install', 215, 58);
+      sepCtx.fillText('•  Cost-Effective', 435, 56);
+      sepCtx.fillText('•  Scalable', 645, 55);
+
+      sepCtx.fillText('Disadvantages .', 52, 118);
+      sepCtx.fillText('•  Performance', 230, 118);
+      sepCtx.fillText('•  Fault   tolerant', 462, 118);
+      sepCtx.fillText('•  Collisions', 668, 116);
+    }
+
+    document.querySelectorAll('[data-sep]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-sep]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSepStage = parseInt(btn.dataset.sep, 10);
+        drawSeparationStage(currentSepStage);
+      });
+    });
+    drawSeparationStage(2);
+
+    // 3. Step 2: Color-coded per-letter stroke match boxes (matching frame_04_f.jpg)
+    const sampleWords = ['Interconnection', 'Handshake', 'request', 'Jitter', 'Queue', 'reject'];
+    const strokeColors = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0891b2'];
+    const wordsMatchGrid = document.getElementById('wordsMatchGrid');
+
+    sampleWords.forEach(word => {
+      const item = document.createElement('div');
+      item.className = 'word-match-item';
+
+      // Build multi-colored glyph SVG
+      let xCursor = 4;
+      let pathsHtml = '';
+      for (let i = 0; i < word.length; i++) {
+        const ch = word[i];
+        const col = strokeColors[i % strokeColors.length];
+        const gPaths = getGlyphPaths(ch).length ? getGlyphPaths(ch) : getGlyphPaths(ch.toLowerCase());
+        gPaths.forEach(d => {
+          pathsHtml += `<g transform="translate(${xCursor}, 0) scale(0.78)">
+            <path d="${d}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          </g>`;
+        });
+        xCursor += 14.2;
+      }
+
+      item.innerHTML = `
+        <div class="word-crop-box">
+          <svg width="${xCursor + 6}" height="30" viewBox="0 0 ${xCursor + 6} 30">${pathsHtml}</svg>
+        </div>
+        <span class="word-arrow">→</span>
+        <span class="word-decoded">${word}</span>
+      `;
+      wordsMatchGrid.appendChild(item);
+    });
+
+    // 4. Step 4: Trace the pen, then redraw it (photo -> ink shape -> pen path)
+    const traceGlyphs = ['g', 'a', 'd', 'r', 'f', 'y', '2', '&'];
+    let activeTraceGlyph = 'g';
+    const glyphPickerRow = document.getElementById('glyphPickerRow');
+
+    function renderTraceCanvases(ch) {
+      const paths = getGlyphPaths(ch);
+      const cPhoto = document.getElementById('tracePhotoCanvas').getContext('2d');
+      const cShape = document.getElementById('traceShapeCanvas').getContext('2d');
+      const cPath = document.getElementById('tracePathCanvas').getContext('2d');
+
+      // 1. Photo (pixelated low-res 34px crop with ruled line behind it)
+      cPhoto.clearRect(0, 0, 140, 175);
+      cPhoto.fillStyle = '#aeb6ca';
+      cPhoto.fillRect(10, 8, 120, 158);
+      cPhoto.fillStyle = 'rgba(110, 120, 155, 0.45)';
+      cPhoto.fillRect(10, 96, 120, 6);
+
+      cPhoto.save();
+      cPhoto.filter = 'blur(2.2px)';
+      cPhoto.translate(22, 12);
+      cPhoto.scale(4.1, 4.1);
+      cPhoto.strokeStyle = '#141b3d';
+      cPhoto.lineWidth = 3.2;
+      cPhoto.lineCap = 'round';
+      paths.forEach(d => cPhoto.stroke(new Path2D(d)));
+      cPhoto.restore();
+
+      // 2. Ink shape (thresholded thick ink blob silhouette)
+      cShape.clearRect(0, 0, 140, 175);
+      cShape.save();
+      cShape.translate(22, 12);
+      cShape.scale(4.1, 4.1);
+      cShape.strokeStyle = '#3f526d';
+      cShape.lineWidth = 3.1;
+      cShape.lineCap = 'round';
+      cShape.lineJoin = 'round';
+      paths.forEach(d => cShape.stroke(new Path2D(d)));
+      cShape.restore();
+
+      // 3. Pen path (clean centerline vector spline with Bézier control points)
+      cPath.clearRect(0, 0, 140, 175);
+      cPath.save();
+      cPath.translate(22, 12);
+      cPath.scale(4.1, 4.1);
+      cPath.strokeStyle = '#dfe4ec';
+      cPath.lineWidth = 3.2;
+      cPath.lineCap = 'round';
+      paths.forEach(d => cPath.stroke(new Path2D(d)));
+
+      cPath.strokeStyle = '#1e2d6e';
+      cPath.lineWidth = 0.85;
+      paths.forEach(d => cPath.stroke(new Path2D(d)));
+      cPath.restore();
+    }
+
+    traceGlyphs.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'glyph-btn' + (g === activeTraceGlyph ? ' active' : '');
+      btn.textContent = g;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.glyph-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTraceGlyph = g;
+        renderTraceCanvases(g);
+      });
+      glyphPickerRow.appendChild(btn);
+    });
+    renderTraceCanvases('g');
+
+    // 5. Step 5: Keep the quirks interactive grid (matching frame_04_h.jpg)
+    const quirkDefs = [
+      { key: 'ringI', ch: 'i', label: 'ring-dotted i' },
+      { key: 'loopL', ch: 'l', label: 'looped l' },
+      { key: 'loopR', ch: 'r', label: 'looped r' },
+      { key: 'curlD', ch: 'd', label: 'curled d' },
+      { key: 'halfT', ch: 't', label: 'half-crossed t' },
+      { key: 'curl2', ch: '2', label: 'curled 2' },
+      { key: 'crossAmp', ch: '&', label: 'crossed-leg &' },
+      { key: 'arrowLig', ch: '→', label: 'the margin arrow' }
+    ];
+
+    function renderQuirksGrid() {
+      const grid = document.getElementById('quirksGrid');
+      grid.innerHTML = '';
+      quirkDefs.forEach(q => {
+        const card = document.createElement('div');
+        card.className = 'quirk-card' + (activeQuirks[q.key] ? ' enabled' : '');
+        const paths = getGlyphPaths(q.ch);
+        const col = q.ch === '→' ? '#d45d48' : '#1e2d6e';
+        const pathTags = paths.map(d =>
+          `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`
+        ).join('');
+
+        card.innerHTML = `
+          <svg width="78" height="86" viewBox="0 0 34 36">
+            <g transform="translate(4, 2) scale(1.05)">${pathTags}</g>
+          </svg>
+          <div class="quirk-label">${q.label}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:${activeQuirks[q.key] ? '#16a34a' : '#9ca3af'};margin-top:2px">
+            ${activeQuirks[q.key] ? '● Active in font' : '○ Standard glyph'}
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          activeQuirks[q.key] = !activeQuirks[q.key];
+          renderQuirksGrid();
+          mountAllTitles();
+          renderTraceCanvases(activeTraceGlyph);
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    // 6. Live Typewriter & Working SVG Font File Exporter
+    function updateLiveTyped() {
+      const txt = document.getElementById('customTextInput').value || ' ';
+      document.getElementById('liveTypedOutput').innerHTML = renderHandwritingSVG(txt, 1.25, 820);
+    }
+
+    document.getElementById('customTextInput').addEventListener('input', updateLiveTyped);
+
+    document.getElementById('btnDownloadFont').addEventListener('click', () => {
+      const chars = 'abcdefghijklmnopqrstuvwxyzACFHJKMOQRS123467890&.,:$()!→';
+      let glyphsXml = '';
+      for (const ch of chars) {
+        const d = getGlyphPaths(ch).join(' ');
+        const safeCh = ch.replace('&', '&amp;');
+        glyphsXml += `    <glyph unicode="${safeCh}" horiz-adv-x="22" d="${d}" />\n`;
+      }
+      const svgFontContent = `<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <font id="HarshpreetHand" horiz-adv-x="22">
+      <font-face font-family="Harshpreet Hand" units-per-em="36" ascent="28" descent="-8" />
+      <missing-glyph horiz-adv-x="18" />
+${glyphsXml}    </font>
+  </defs>
+</svg>`;
+      const blob = new Blob([svgFontContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'HarshpreetHand-Regular.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    renderQuirksGrid();
+    mountAllTitles();
+  </script>
+</body>
+</html>

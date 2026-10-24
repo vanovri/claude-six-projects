@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doodle Chess — Hand-Drawn Notebook Paper Chess</title>
+  <style>
+    :root {
+      --paper-bg: #f4f1e6;
+      --paper-line: #d3deea;
+      --margin-red: #e28a8a;
+      --ink-dark: #2c2a29;
+      --ink-blue: #344973;
+      --crayon-red: #c93b3b;
+      --pencil-green: #b7cdb1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--paper-bg);
+      color: var(--ink-dark);
+      font-family: 'Comic Sans MS', 'Chalkboard SE', 'Bradley Hand', cursive, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image:
+        linear-gradient(90deg, transparent 78px, var(--margin-red) 78px, var(--margin-red) 80px, transparent 80px),
+        repeating-linear-gradient(0deg, var(--paper-bg) 0px, var(--paper-bg) 29px, var(--paper-line) 29px, var(--paper-line) 30px);
+    }
+
+    header.notebook-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px 10px 96px;
+      border-bottom: 2px dashed rgba(52, 73, 115, 0.25);
+      background: rgba(244, 241, 230, 0.86);
+      backdrop-filter: blur(3px);
+    }
+
+    .back-link {
+      color: var(--ink-blue);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 2px solid var(--ink-blue);
+      border-radius: 12px 4px 14px 5px;
+      background: #fffdf7;
+      transition: transform 0.15s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .back-link:hover {
+      transform: rotate(-1.5deg) scale(1.03);
+    }
+
+    .title-group h1 {
+      font-size: 21px;
+      color: var(--ink-dark);
+      letter-spacing: 0.4px;
+    }
+
+    .title-group span {
+      font-size: 12px;
+      color: #6b665e;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sketch-btn, .sketch-select {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-dark);
+      background: #fffdf8;
+      border: 2px solid var(--ink-dark);
+      border-radius: 10px 4px 12px 5px;
+      padding: 5px 12px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 rgba(44, 42, 41, 0.18);
+      transition: transform 0.12s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .sketch-btn:hover {
+      transform: translateY(-1px);
+      background: #f9f4e8;
+    }
+
+    .sketch-btn.active {
+      background: #fde68a;
+    }
+
+    /* Main Workspace Layout */
+    main.notebook-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 230px 1fr 270px;
+      gap: 16px;
+      max-width: 1340px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 14px 20px;
+      align-items: center;
+    }
+
+    /* Left Margin Doodles Column (matching frame_03.jpg) */
+    .margin-doodles {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-left: 12px;
+    }
+
+    .date-box-sketch {
+      border: 1.8px solid #7c776f;
+      border-radius: 4px 8px 4px 6px;
+      padding: 8px 12px;
+      background: rgba(255, 253, 245, 0.65);
+      font-size: 13px;
+      color: #5b5750;
+      position: relative;
+      transform: rotate(-1deg);
+    }
+
+    .status-banner {
+      border: 2px solid var(--ink-blue);
+      border-radius: 12px 5px 10px 6px;
+      padding: 10px 12px;
+      background: #fffef9;
+      box-shadow: 3px 3px 0 rgba(52, 73, 115, 0.14);
+    }
+
+    .status-turn {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink-blue);
+      margin-bottom: 4px;
+    }
+
+    .status-sub {
+      font-size: 12px;
+      color: #666159;
+    }
+
+    /* Center Hand-Drawn Board Wrapper */
+    .board-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    #chessCanvas {
+      width: min(74vh, 620px);
+      height: min(74vh, 620px);
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(44, 42, 41, 0.12);
+      background: #f5f2e7;
+    }
+
+    /* Right Notebook Notes & Move Log */
+    aside.notebook-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: min(74vh, 620px);
+    }
+
+    .sketch-card {
+      background: rgba(255, 253, 247, 0.85);
+      border: 2px solid var(--ink-dark);
+      border-radius: 8px 14px 6px 12px;
+      padding: 10px 12px;
+      box-shadow: 3px 3px 0 rgba(44, 42, 41, 0.14);
+    }
+
+    .sketch-card h3 {
+      font-size: 13.5px;
+      color: var(--ink-blue);
+      border-bottom: 1.5px dashed #b9c4d4;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .captured-row {
+      min-height: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      font-size: 18px;
+      align-items: center;
+    }
+
+    .move-log-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .move-list {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 12.5px;
+      line-height: 1.65;
+      padding-right: 4px;
+      color: var(--ink-blue);
+    }
+
+    .move-pair {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr;
+      padding: 1px 4px;
+      border-bottom: 1px dotted rgba(52, 73, 115, 0.18);
+    }
+
+    .move-pair:last-child {
+      background: rgba(253, 230, 138, 0.35);
+      font-weight: 700;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+      font-size: 11px;
+      color: #4b4741;
+    }
+
+    /* Promotion Modal */
+    .promo-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 28, 25, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .promo-modal.open {
+      display: flex;
+    }
+
+    .promo-box {
+      background: var(--paper-bg);
+      border: 3px solid var(--ink-dark);
+      border-radius: 16px 8px 18px 8px;
+      padding: 18px 22px;
+      text-align: center;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.25);
+    }
+
+    .promo-options {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .promo-btn {
+      padding: 8px 14px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      background: #fff;
+      border: 2px solid var(--ink-dark);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .promo-btn:hover {
+      background: #fde68a;
+    }
+
+    @media (max-width: 1050px) {
+      main.notebook-workspace {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+      .margin-doodles, aside.notebook-sidebar {
+        width: min(92vw, 620px);
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="notebook-topbar">
+    <div style="display:flex;align-items:center;gap:14px">
+      <a href="../../index.html" class="back-link">← All 6 Projects</a>
+      <div class="title-group">
+        <h1>2. Doodle Chess on Notebook Paper</h1>
+        <span>Built with Claude Sonnet 5.5 · Hand-drawn doodle pieces & legal chess engine</span>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <select id="modeSelect" class="sketch-select">
+        <option value="ai">Play vs. Claude Doodle AI</option>
+        <option value="2p">2-Player Pass & Play</option>
+      </select>
+      <select id="aiDepthSelect" class="sketch-select">
+        <option value="2">AI: Casual Doodler</option>
+        <option value="3" selected>AI: Notebook Master</option>
+      </select>
+      <button class="sketch-btn" id="btnUndo">↶ Undo</button>
+      <button class="sketch-btn" id="btnFlip">⇅ Flip Board</button>
+      <button class="sketch-btn" id="btnNewGame">★ New Page</button>
+    </div>
+  </header>
+
+  <main class="notebook-workspace">
+    <!-- Left Margin Doodles matching frame_03.jpg -->
+    <div class="margin-doodles">
+      <div class="date-box-sketch">
+        <div style="font-size:11px;color:#8c857B">Page No. 14</div>
+        <div style="font-family:cursive;font-size:15px;color:#5c7a67">okay  ✓</div>
+      </div>
+
+      <div class="status-banner">
+        <div class="status-turn" id="turnText">🐝 Meadow Side's Turn (White)</div>
+        <div class="status-sub" id="statusSubText">Click any doodle piece to sketch your move!</div>
+      </div>
+
+      <!-- Margin Sketch SVG matching the cloud, molehill & rainbow in Slide 3 -->
+      <svg viewBox="0 0 210 290" style="width:100%;height:auto;overflow:visible">
+        <!-- Fluffy Sleeping Cloud Doodle -->
+        <g transform="translate(10, 15)" stroke="#4c5c78" stroke-width="1.8" fill="#ffffff" stroke-linecap="round">
+          <path d="M 25 55 C 10 55, 8 36, 22 32 C 24 14, 52 12, 62 25 C 76 18, 98 26, 96 42 C 110 44, 110 58, 94 58 Z" />
+          <path d="M 38 40 Q 43 44 48 40" fill="none" />
+          <path d="M 65 40 Q 70 44 75 40" fill="none" />
+          <circle cx="56" cy="46" r="2" fill="#4c5c78" />
+          <path d="M 32 44 Q 35 46 38 44" stroke="#e5989b" stroke-width="2.5" />
+          <path d="M 74 44 Q 77 46 80 44" stroke="#e5989b" stroke-width="2.5" />
+        </g>
+
+        <!-- Little Molehill & Sprout + Tiny Mushroom Doodle -->
+        <g transform="translate(28, 108)" stroke="#5c4738" stroke-width="1.7" fill="none" stroke-linecap="round">
+          <path d="M 15 45 Q 45 10 78 45" fill="#e6dec8" />
+          <path d="M 46 24 L 46 8 M 46 10 Q 55 5 52 14" stroke="#5b8a5a" stroke-width="1.8" />
+          <circle cx="14" cy="42" r="5" fill="#d8cbb8" />
+          <circle cx="24" cy="44" r="4" fill="#d8cbb8" />
+          <circle cx="33" cy="43" r="4.5" fill="#d8cbb8" />
+          <!-- Little mushroom next to hill -->
+          <path d="M 92 52 L 92 43 M 98 52 L 98 43" />
+          <path d="M 83 43 Q 95 28 107 43 Z" fill="#e5989b" />
+        </g>
+
+        <!-- Pastel Hand-Drawn Rainbow Arc in Bottom-Left Margin -->
+        <g transform="translate(-10, 175)" fill="none" stroke-linecap="round">
+          <path d="M 10 110 A 95 95 0 0 1 135 110" stroke="#e5989b" stroke-width="8" opacity="0.65" />
+          <path d="M 18 110 A 87 87 0 0 1 127 110" stroke="#f6bd60" stroke-width="8" opacity="0.65" />
+          <path d="M 26 110 A 79 79 0 0 1 119 110" stroke="#f7ede2" stroke-width="7" opacity="0.75" />
+          <path d="M 34 110 A 71 71 0 0 1 111 110" stroke="#84a59d" stroke-width="8" opacity="0.55" />
+          <path d="M 42 110 A 63 63 0 0 1 103 110" stroke="#9b9ece" stroke-width="7" opacity="0.55" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- Center Hand-Drawn Chessboard Canvas -->
+    <div class="board-stage">
+      <canvas id="chessCanvas" width="680" height="680"></canvas>
+    </div>
+
+    <!-- Right Sidebar: Piece Legend, Captured Doodles & Move History -->
+    <aside class="notebook-sidebar">
+      <div class="sketch-card">
+        <h3><span>Doodle Piece Guide</span><span>✏️</span></h3>
+        <div class="legend-grid">
+          <div>👑 <strong>King:</strong> Crowned Sprout</div>
+          <div>🐝 <strong>Queen:</strong> Queen Bee</div>
+          <div>👾 <strong>Rook:</strong> Star Blob</div>
+          <div>🌰 <strong>Bishop:</strong> Acorn Sprite</div>
+          <div>🦙 <strong>Knight:</strong> Doodle Llama</div>
+          <div>🍄 <strong>Pawn:</strong> Spotted Toadstool</div>
+        </div>
+      </div>
+
+      <div class="sketch-card">
+        <h3><span>Captured by Meadow (White)</span><span id="scoreWhite"></span></h3>
+        <div class="captured-row" id="capturedByWhite"></div>
+      </div>
+
+      <div class="sketch-card">
+        <h3><span>Captured by Nightberry (Black)</span><span id="scoreBlack"></span></h3>
+        <div class="captured-row" id="capturedByBlack"></div>
+      </div>
+
+      <div class="sketch-card move-log-card">
+        <h3><span>Notebook Move Log</span><span id="moveCountLabel">0 moves</span></h3>
+        <div class="move-list" id="moveList"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Pawn Promotion Modal -->
+  <div class="promo-modal" id="promoModal">
+    <div class="promo-box">
+      <h3>🍄 Toadstool reached the end! Promote to:</h3>
+      <div class="promo-options">
+        <button class="promo-btn" data-promo="q">🐝 Queen Bee</button>
+        <button class="promo-btn" data-promo="r">👾 Star Blob (Rook)</button>
+        <button class="promo-btn" data-promo="b">🌰 Acorn (Bishop)</button>
+        <button class="promo-btn" data-promo="n">🦙 Llama (Knight)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // Doodle Chess — Hand-Drawn Notebook Paper Rendering & Legal Chess Engine
+    // =========================================================================
+    const canvas = document.getElementById('chessCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Standard initial board or vibrant mid-game toggle
+    const INITIAL_BOARD = [
+      ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'],
+      ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
+      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null],
+      ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'],
+      ['wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr']
+    ];
+
+    let board = [];
+    let turn = 'w';
+    let selected = null;
+    let validMoves = [];
+    let moveHistory = [];
+    let stateSnapshots = [];
+    let capturedW = []; // black pieces captured by white
+    let capturedB = []; // white pieces captured by black
+    let flipped = false;
+    let castling = { wK: true, wQ: true, bK: true, bQ: true };
+    let enPassant = null; // { r, c }
+    let lastMove = null;  // { fr, fc, tr, tc }
+    let pendingPromotion = null;
+    let gameOver = false;
+
+    function cloneBoard(b) {
+      return b.map(row => row.slice());
+    }
+
+    function initGame() {
+      board = cloneBoard(INITIAL_BOARD);
+      turn = 'w';
+      selected = null;
+      validMoves = [];
+      moveHistory = [];
+      stateSnapshots = [];
+      capturedW = [];
+      capturedB = [];
+      castling = { wK: true, wQ: true, bK: true, bQ: true };
+      enPassant = null;
+      lastMove = null;
+      pendingPromotion = null;
+      gameOver = false;
+
+      // Pre-select the Queen Bee or a Knight on start so the user immediately sees the red doodle circle + dots like Slide 3
+      selected = { r: 6, c: 4 };
+      validMoves = getLegalMovesForSquare(6, 4);
+      updateSidebarUI();
+      drawBoard();
+    }
+
+    // -------------------------------------------------------------------------
+    // Legal Chess Move Generator
+    // -------------------------------------------------------------------------
+    function inBounds(r, c) {
+      return r >= 0 && r < 8 && c >= 0 && c < 8;
+    }
+
+    function getPseudoMoves(b, r, c, ep, castleRights) {
+      const p = b[r][c];
+      if (!p) return [];
+      const color = p[0];
+      const type = p[1];
+      const enemy = color === 'w' ? 'b' : 'w';
+      const moves = [];
+
+      if (type === 'p') {
+        const dir = color === 'w' ? -1 : 1;
+        const startRow = color === 'w' ? 6 : 1;
+        if (inBounds(r + dir, c) && !b[r + dir][c]) {
+          moves.push({ tr: r + dir, tc: c });
+          if (r === startRow && !b[r + dir * 2][c]) {
+            moves.push({ tr: r + dir * 2, tc: c, doubleStep: true });
+          }
+        }
+        for (const dc of [-1, 1]) {
+          const nr = r + dir, nc = c + dc;
+          if (inBounds(nr, nc)) {
+            if (b[nr][nc] && b[nr][nc][0] === enemy) {
+              moves.push({ tr: nr, tc: nc });
+            } else if (ep && ep.r === nr && ep.c === nc) {
+              moves.push({ tr: nr, tc: nc, isEP: true });
+            }
+          }
+        }
+      } else if (type === 'n') {
+        const jumps = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+        for (const [dr, dc] of jumps) {
+          const nr = r + dr, nc = c + dc;
+          if (inBounds(nr, nc) && (!b[nr][nc] || b[nr][nc][0] === enemy)) {
+            moves.push({ tr: nr, tc: nc });
+          }
+        }
+      } else if (type === 'b' || type === 'r' || type === 'q') {
+        const dirs = [];
+        if (type === 'b' || type === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+        if (type === 'r' || type === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+        for (const [dr, dc] of dirs) {
+          let nr = r + dr, nc = c + dc;
+          while (inBounds(nr, nc)) {
+            if (!b[nr][nc]) {
+              moves.push({ tr: nr, tc: nc });
+            } else {
+              if (b[nr][nc][0] === enemy) moves.push({ tr: nr, tc: nc });
+              break;
+            }
+            nr += dr;
+            nc += dc;
+          }
+        }
+      } else if (type === 'k') {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = r + dr, nc = c + dc;
+            if (inBounds(nr, nc) && (!b[nr][nc] || b[nr][nc][0] === enemy)) {
+              moves.push({ tr: nr, tc: nc });
+            }
+          }
+        }
+        // Castling
+        if (castleRights) {
+          const homeRow = color === 'w' ? 7 : 0;
+          if (r === homeRow && c === 4 && !isKingInCheck(b, color)) {
+            const canK = color === 'w' ? castleRights.wK : castleRights.bK;
+            const canQ = color === 'w' ? castleRights.wQ : castleRights.bQ;
+            if (canK && !b[homeRow][5] && !b[homeRow][6] &&
+                !isSquareAttacked(b, homeRow, 5, enemy) && !isSquareAttacked(b, homeRow, 6, enemy)) {
+              moves.push({ tr: homeRow, tc: 6, castle: 'K' });
+            }
+            if (canQ && !b[homeRow][3] && !b[homeRow][2] && !b[homeRow][1] &&
+                !isSquareAttacked(b, homeRow, 3, enemy) && !isSquareAttacked(b, homeRow, 2, enemy)) {
+              moves.push({ tr: homeRow, tc: 2, castle: 'Q' });
+            }
+          }
+        }
+      }
+      return moves;
+    }
+
+    function isSquareAttacked(b, tr, tc, byColor) {
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (p && p[0] === byColor) {
+            if (p[1] === 'p') {
+              const dir = byColor === 'w' ? -1 : 1;
+              if (r + dir === tr && (c - 1 === tc || c + 1 === tc)) return true;
+            } else {
+              const pm = getPseudoMoves(b, r, c, null, null);
+              if (pm.some(m => m.tr === tr && m.tc === tc)) return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    function isKingInCheck(b, color) {
+      let kr = -1, kc = -1;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (b[r][c] === color + 'k') {
+            kr = r;
+            kc = c;
+            break;
+          }
+        }
+      }
+      if (kr === -1) return true;
+      return isSquareAttacked(b, kr, kc, color === 'w' ? 'b' : 'w');
+    }
+
+    function applyMoveOnBoard(b, fr, fc, move) {
+      const nb = cloneBoard(b);
+      const piece = nb[fr][fc];
+      nb[move.tr][move.tc] = move.promote ? (piece[0] + move.promote) : piece;
+      nb[fr][fc] = null;
+
+      if (move.isEP) {
+        const capR = piece[0] === 'w' ? move.tr + 1 : move.tr - 1;
+        nb[capR][move.tc] = null;
+      }
+      if (move.castle === 'K') {
+        nb[fr][5] = nb[fr][7];
+        nb[fr][7] = null;
+      } else if (move.castle === 'Q') {
+        nb[fr][3] = nb[fr][0];
+        nb[fr][0] = null;
+      }
+      return nb;
+    }
+
+    function getLegalMovesForSquare(r, c, b = board, ep = enPassant, cr = castling) {
+      const p = b[r][c];
+      if (!p) return [];
+      const color = p[0];
+      const pseudo = getPseudoMoves(b, r, c, ep, cr);
+      return pseudo.filter(m => {
+        const nb = applyMoveOnBoard(b, r, c, m);
+        return !isKingInCheck(nb, color);
+      });
+    }
+
+    function getAllLegalMoves(color, b = board, ep = enPassant, cr = castling) {
+      const all = [];
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (b[r][c] && b[r][c][0] === color) {
+            const ms = getLegalMovesForSquare(r, c, b, ep, cr);
+            ms.forEach(m => all.push({ fr: r, fc: c, ...m }));
+          }
+        }
+      }
+      return all;
+    }
+
+    // -------------------------------------------------------------------------
+    // Execute Move & AI Opponent
+    // -------------------------------------------------------------------------
+    function toAlgebraic(r, c) {
+      return 'abcdefgh'[c] + (8 - r);
+    }
+
+    const PIECE_EMOJI = {
+      wp: '🍄', wr: '👾', wn: '🦙', wb: '🌰', wq: '🐝', wk: '👑',
+      bp: '🍄', br: '👾', bn: '🦙', bb: '🌰', bq: '🐝', bk: '👑'
+    };
+
+    function executeMove(fr, fc, move) {
+      const piece = board[fr][fc];
+      const color = piece[0];
+      const isPawnPromo = piece[1] === 'p' && (move.tr === 0 || move.tr === 7) && !move.promote;
+
+      if (isPawnPromo && (color === 'w' || document.getElementById('modeSelect').value === '2p')) {
+        pendingPromotion = { fr, fc, move };
+        document.getElementById('promoModal').classList.add('open');
+        return;
+      } else if (isPawnPromo) {
+        move.promote = 'q';
+      }
+
+      // Save snapshot for Undo
+      stateSnapshots.push({
+        board: cloneBoard(board),
+        turn,
+        castling: { ...castling },
+        enPassant: enPassant ? { ...enPassant } : null,
+        lastMove: lastMove ? { ...lastMove } : null,
+        moveHistory: moveHistory.slice(),
+        capturedW: capturedW.slice(),
+        capturedB: capturedB.slice(),
+        gameOver
+      });
+
+      // Record capture
+      let capturedPiece = board[move.tr][move.tc];
+      if (move.isEP) {
+        const capR = color === 'w' ? move.tr + 1 : move.tr - 1;
+        capturedPiece = board[capR][move.tc];
+      }
+      if (capturedPiece) {
+        if (color === 'w') capturedW.push(capturedPiece);
+        else capturedB.push(capturedPiece);
+      }
+
+      // Update castling rights
+      if (piece === 'wk') { castling.wK = false; castling.wQ = false; }
+      if (piece === 'bk') { castling.bK = false; castling.bQ = false; }
+      if (fr === 7 && fc === 0) castling.wQ = false;
+      if (fr === 7 && fc === 7) castling.wK = false;
+      if (fr === 0 && fc === 0) castling.bQ = false;
+      if (fr === 0 && fc === 7) castling.bK = false;
+
+      enPassant = move.doubleStep ? { r: (fr + move.tr) / 2, c: fc } : null;
+      board = applyMoveOnBoard(board, fr, fc, move);
+      lastMove = { fr, fc, tr: move.tr, tc: move.tc };
+
+      // Move notation
+      const pSym = piece[1] === 'p' ? '' : piece[1].toUpperCase();
+      const capSym = capturedPiece ? 'x' : '';
+      const dest = toAlgebraic(move.tr, move.tc);
+      let san = move.castle === 'K' ? 'O-O' : move.castle === 'Q' ? 'O-O-O' : `${pSym}${capSym}${dest}`;
+      if (move.promote) san += `=${move.promote.toUpperCase()}`;
+
+      turn = color === 'w' ? 'b' : 'w';
+      const oppMoves = getAllLegalMoves(turn);
+      const inChk = isKingInCheck(board, turn);
+      if (oppMoves.length === 0) {
+        gameOver = true;
+        san += inChk ? '#' : ' (½)';
+      } else if (inChk) {
+        san += '+';
+      }
+
+      moveHistory.push(san);
+      selected = null;
+      validMoves = [];
+      updateSidebarUI();
+      drawBoard();
+
+      if (!gameOver && turn === 'b' && document.getElementById('modeSelect').value === 'ai') {
+        setTimeout(makeAIMove, 320);
+      }
+    }
+
+    // Minimax AI with Alpha-Beta Pruning
+    const VALS = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+    function evaluateBoard(b) {
+      let score = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = b[r][c];
+          if (!p) continue;
+          const v = VALS[p[1]];
+          const centerBonus = (3.5 - Math.abs(3.5 - r)) * 4 + (3.5 - Math.abs(3.5 - c)) * 4;
+          score += p[0] === 'w' ? (v + centerBonus) : -(v + centerBonus);
+        }
+      }
+      return score;
+    }
+
+    function minimax(b, depth, alpha, beta, maximizing) {
+      if (depth === 0) return evaluateBoard(b);
+      const color = maximizing ? 'w' : 'b';
+      const moves = getAllLegalMoves(color, b, null, null);
+      if (moves.length === 0) {
+        if (isKingInCheck(b, color)) return maximizing ? -15000 - depth : 15000 + depth;
+        return 0;
+      }
+
+      if (maximizing) {
+        let maxEval = -Infinity;
+        for (const m of moves) {
+          const nb = applyMoveOnBoard(b, m.fr, m.fc, m);
+          const ev = minimax(nb, depth - 1, alpha, beta, false);
+          maxEval = Math.max(maxEval, ev);
+          alpha = Math.max(alpha, ev);
+          if (beta <= alpha) break;
+        }
+        return maxEval;
+      } else {
+        let minEval = Infinity;
+        for (const m of moves) {
+          const nb = applyMoveOnBoard(b, m.fr, m.fc, m);
+          const ev = minimax(nb, depth - 1, alpha, beta, true);
+          minEval = Math.min(minEval, ev);
+          beta = Math.min(beta, ev);
+          if (beta <= alpha) break;
+        }
+        return minEval;
+      }
+    }
+
+    function makeAIMove() {
+      if (gameOver || turn !== 'b') return;
+      const depth = parseInt(document.getElementById('aiDepthSelect').value, 10);
+      const moves = getAllLegalMoves('b');
+      if (moves.length === 0) return;
+
+      // Prioritize captures first for better pruning
+      moves.sort((a, b) => (board[b.tr][b.tc] ? 1 : 0) - (board[a.tr][a.tc] ? 1 : 0));
+
+      let bestMove = moves[0];
+      let bestVal = Infinity;
+      for (const m of moves) {
+        if (board[m.fr][m.fc] === 'bp' && m.tr === 7) m.promote = 'q';
+        const nb = applyMoveOnBoard(board, m.fr, m.fc, m);
+        const val = minimax(nb, depth - 1, -Infinity, Infinity, true) + (Math.random() * 8 - 4);
+        if (val < bestVal) {
+          bestVal = val;
+          bestMove = m;
+        }
+      }
+      executeMove(bestMove.fr, bestMove.fc, bestMove);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hand-Drawn Notebook Paper & Doodle Piece Renderer
+    // -------------------------------------------------------------------------
+    function drawWobblyLine(x1, y1, x2, y2, color = '#2c2a29', width = 2.2, seed = 1) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      const steps = 8;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const wob = i < steps ? Math.sin(t * Math.PI * 3 + seed) * 1.4 : 0;
+        const nx = x1 + (x2 - x1) * t + (y1 === y2 ? 0 : wob);
+        const ny = y1 + (y2 - y1) * t + (x1 === x2 ? 0 : wob);
+        ctx.lineTo(nx, ny);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPencilShading(x, y, size, seed) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 2, y + 2, size - 4, size - 4);
+      ctx.clip();
+
+      // Soft colored-pencil green diagonal hatching (matching Slide 3 board squares)
+      ctx.fillStyle = 'rgba(173, 198, 165, 0.36)';
+      ctx.fillRect(x, y, size, size);
+
+      ctx.strokeStyle = 'rgba(130, 165, 124, 0.38)';
+      ctx.lineWidth = 2.2;
+      for (let d = -size; d < size * 2; d += 7) {
+        ctx.beginPath();
+        ctx.moveTo(x + d, y + 3);
+        ctx.lineTo(x + d - size * 0.7, y + size - 3);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Draw each of the 6 adorable hand-drawn doodle pieces matching Slide 3
+    function drawDoodlePiece(piece, cx, cy, size) {
+      const color = piece[0]; // 'w' (warm meadow) or 'b' (cool nightberry)
+      const type = piece[1];
+      const r = size * 0.39;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      // Subtle paper drop shadow
+      ctx.fillStyle = 'rgba(40,35,30,0.10)';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.82, r * 0.65, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (type === 'p') {
+        // MUSHROOM PAWN (exactly like row 2 in frame_03.jpg!)
+        const capColor = color === 'w' ? '#d96b59' : '#6c63ac';
+        const spotColor = color === 'w' ? '#f5cac3' : '#c7c3f0';
+
+        // Chubby Stem
+        ctx.fillStyle = '#f6dfbf';
+        ctx.strokeStyle = '#5c4033';
+        ctx.lineWidth = 2.1;
+        ctx.beginPath();
+        ctx.roundRect(-r * 0.45, 0, r * 0.9, r * 0.72, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Cute eyes & rosy cheeks on stem
+        ctx.fillStyle = '#2b2523';
+        ctx.beginPath();
+        ctx.arc(-r * 0.18, r * 0.34, 2.7, 0, Math.PI * 2);
+        ctx.arc(r * 0.18, r * 0.34, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e5989b';
+        ctx.beginPath();
+        ctx.arc(-r * 0.3, r * 0.45, 2.5, 0, Math.PI * 2);
+        ctx.arc(r * 0.3, r * 0.45, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Little feet
+        ctx.fillStyle = '#d4a373';
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.22, r * 0.76, 4.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.22, r * 0.76, 4.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Mushroom Cap
+        ctx.fillStyle = capColor;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.85, r * 0.08);
+        ctx.bezierCurveTo(-r * 0.9, -r * 0.95, r * 0.9, -r * 0.95, r * 0.85, r * 0.08);
+        ctx.quadraticCurveTo(0, r * 0.22, -r * 0.85, r * 0.08);
+        ctx.fill();
+        ctx.stroke();
+
+        // Spots on cap
+        ctx.fillStyle = spotColor;
+        [[-0.38, -0.35, 4.5], [0.35, -0.32, 4.5], [0, -0.58, 5], [-0.1, -0.15, 3.2]].forEach(([sx, sy, sr]) => {
+          ctx.beginPath();
+          ctx.arc(r * sx, r * sy, sr, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (type === 'r') {
+        // PURPLE STAR-ANTENNA BLOB ROOK (exactly like the purple character in frame_03.jpg!)
+        const bodyFill = color === 'w' ? '#e9a84b' : '#575394';
+        const bellyFill = color === 'w' ? '#faedcd' : '#8d89c7';
+
+        // Star antenna on head
+        ctx.strokeStyle = '#4a436e';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.68);
+        ctx.lineTo(0, -r * 0.98);
+        ctx.stroke();
+        ctx.fillStyle = '#f6bd60';
+        ctx.beginPath();
+        ctx.arc(0, -r * 1.02, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bell-shaped blob body
+        ctx.fillStyle = bodyFill;
+        ctx.strokeStyle = '#2f2c4f';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.82, r * 0.68);
+        ctx.quadraticCurveTo(-r * 0.65, -r * 0.72, 0, -r * 0.72);
+        ctx.quadraticCurveTo(r * 0.65, -r * 0.72, r * 0.82, r * 0.68);
+        ctx.quadraticCurveTo(0, r * 0.82, -r * 0.82, r * 0.68);
+        ctx.fill();
+        ctx.stroke();
+
+        // Cute goggle eyes
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-r * 0.22, -r * 0.2, r * 0.21, 0, Math.PI * 2);
+        ctx.arc(r * 0.22, -r * 0.2, r * 0.21, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#1f1d36';
+        ctx.beginPath();
+        ctx.arc(-r * 0.2, -r * 0.2, r * 0.1, 0, Math.PI * 2);
+        ctx.arc(r * 0.2, -r * 0.2, r * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Belly patch
+        ctx.fillStyle = bellyFill;
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.35, r * 0.35, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'n') {
+        // DOODLE LLAMA / PONY KNIGHT (matching the orange creature on c6 in frame_03.jpg!)
+        const coat = color === 'w' ? '#e59f67' : '#7389ae';
+        ctx.fillStyle = coat;
+        ctx.strokeStyle = '#4a3525';
+        ctx.lineWidth = 2.1;
+
+        // Body & Neck
+        ctx.beginPath();
+        ctx.ellipse(r * 0.1, r * 0.28, r * 0.58, r * 0.38, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Neck & Snout
+        ctx.beginPath();
+        ctx.roundRect(-r * 0.42, -r * 0.62, r * 0.46, r * 0.85, 9);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.42, -r * 0.42, r * 0.32, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Ears
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.3, -r * 0.6);
+        ctx.lineTo(-r * 0.38, -r * 0.92);
+        ctx.lineTo(-r * 0.14, -r * 0.62);
+        ctx.moveTo(-r * 0.1, -r * 0.6);
+        ctx.lineTo(0, -r * 0.92);
+        ctx.lineTo(r * 0.08, -r * 0.58);
+        ctx.fill();
+        ctx.stroke();
+
+        // Big expressive eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(-r * 0.36, -r * 0.46, 4.2, 0, Math.PI * 2);
+        ctx.arc(-r * 0.14, -r * 0.46, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(-r * 0.36, -r * 0.46, 2.1, 0, Math.PI * 2);
+        ctx.arc(-r * 0.14, -r * 0.46, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'b') {
+        // ACORN / PINECONE SPRITE BISHOP (matching the cute acorn character on e4 in frame_03.jpg!)
+        const bodyCol = color === 'w' ? '#f3d599' : '#95b8d1';
+        const hatCol = color === 'w' ? '#c88a58' : '#4a6fa5';
+
+        // Egg body
+        ctx.fillStyle = bodyCol;
+        ctx.strokeStyle = '#4a3728';
+        ctx.lineWidth = 2.1;
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.22, r * 0.55, r * 0.52, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Pointed Acorn Cap with crosshatch
+        ctx.fillStyle = hatCol;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.58, 0);
+        ctx.quadraticCurveTo(0, -r * 1.15, r * 0.58, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#2b2523';
+        ctx.beginPath();
+        ctx.arc(-r * 0.18, r * 0.22, 3, 0, Math.PI * 2);
+        ctx.arc(r * 0.18, r * 0.22, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'q') {
+        // QUEEN BEE WITH GOLDEN CROWN & SCEPTER (matching d3 in frame_03.jpg!)
+        const stripeLight = color === 'w' ? '#f6bd60' : '#a8dadc';
+        const stripeDark = color === 'w' ? '#6c462f' : '#2b3a55';
+
+        // Translucent flutter wings
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+        ctx.strokeStyle = '#7f8c8d';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.58, -r * 0.05, r * 0.34, r * 0.18, -0.35, 0, Math.PI * 2);
+        ctx.ellipse(r * 0.58, -r * 0.05, r * 0.34, r * 0.18, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Striped bee body
+        ctx.fillStyle = stripeLight;
+        ctx.strokeStyle = stripeDark;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.16, r * 0.52, r * 0.62, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Horizontal honey stripes on lower belly
+        ctx.strokeStyle = stripeDark;
+        ctx.lineWidth = 3.5;
+        for (const sy of [0.22, 0.42, 0.60]) {
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.42, r * sy);
+          ctx.lineTo(r * 0.42, r * sy);
+          ctx.stroke();
+        }
+
+        // Cute eyes
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(-r * 0.18, -r * 0.12, 3.2, 0, Math.PI * 2);
+        ctx.arc(r * 0.18, -r * 0.12, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Golden Crown
+        ctx.fillStyle = '#ffd166';
+        ctx.strokeStyle = '#8d5b2c';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.34, -r * 0.42);
+        ctx.lineTo(-r * 0.28, -r * 0.85);
+        ctx.lineTo(-r * 0.08, -r * 0.58);
+        ctx.lineTo(0, -r * 0.92);
+        ctx.lineTo(r * 0.08, -r * 0.58);
+        ctx.lineTo(r * 0.28, -r * 0.85);
+        ctx.lineTo(r * 0.34, -r * 0.42);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Honey dipper scepter on right side
+        ctx.strokeStyle = '#9c6644';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, r * 0.28);
+        ctx.lineTo(r * 0.78, -r * 0.32);
+        ctx.stroke();
+        ctx.fillStyle = '#f4a261';
+        ctx.beginPath();
+        ctx.arc(r * 0.78, -r * 0.36, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (type === 'k') {
+        // CROWNED KING CHARACTER (matching bottom-right of frame_03.jpg!)
+        const robeCol = color === 'w' ? '#e07a5f' : '#3d405b';
+        ctx.fillStyle = robeCol;
+        ctx.strokeStyle = '#2b2523';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.roundRect(-r * 0.54, -r * 0.28, r * 1.08, r * 0.98, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        // Face
+        ctx.fillStyle = '#faedcd';
+        ctx.beginPath();
+        ctx.arc(0, -r * 0.05, r * 0.36, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Eyes & smile
+        ctx.fillStyle = '#2b2523';
+        ctx.beginPath();
+        ctx.arc(-r * 0.14, -r * 0.08, 2.7, 0, Math.PI * 2);
+        ctx.arc(r * 0.14, -r * 0.08, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Royal Crown with Cross
+        ctx.fillStyle = '#f6bd60';
+        ctx.strokeStyle = '#6c462f';
+        ctx.lineWidth = 1.9;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.45, -r * 0.35);
+        ctx.lineTo(-r * 0.4, -r * 0.78);
+        ctx.lineTo(-r * 0.15, -r * 0.52);
+        ctx.lineTo(0, -r * 0.85);
+        ctx.lineTo(r * 0.15, -r * 0.52);
+        ctx.lineTo(r * 0.4, -r * 0.78);
+        ctx.lineTo(r * 0.45, -r * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Cross on top of crown
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.85);
+        ctx.lineTo(0, -r * 1.08);
+        ctx.moveTo(-r * 0.12, -r * 0.97);
+        ctx.lineTo(r * 0.12, -r * 0.97);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawBoard() {
+      const W = canvas.width;
+      const H = canvas.height;
+      const padLeft = 56;
+      const padTop = 28;
+      const boardSize = W - padLeft - 24;
+      const sq = boardSize / 8;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Notebook paper background with horizontal blue lines
+      ctx.fillStyle = '#f3efe2';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = 'rgba(135, 165, 200, 0.32)';
+      ctx.lineWidth = 1;
+      for (let y = 24; y < H; y += 26) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+
+      // Shade alternating squares with hand-drawn green colored pencil strokes
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const dr = flipped ? 7 - r : r;
+          const dc = flipped ? 7 - c : c;
+          const x = padLeft + dc * sq;
+          const y = padTop + dr * sq;
+
+          if ((r + c) % 2 === 1) {
+            drawPencilShading(x, y, sq, r * 8 + c);
+          }
+
+          // Highlight last move with warm yellow highlighter
+          if (lastMove && ((lastMove.fr === r && lastMove.fc === c) || (lastMove.tr === r && lastMove.tc === c))) {
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+            ctx.fillRect(x + 3, y + 3, sq - 6, sq - 6);
+          }
+        }
+      }
+
+      // Hand-drawn ink grid lines for the 8x8 board
+      for (let i = 0; i <= 8; i++) {
+        const x = padLeft + i * sq;
+        const y = padTop + i * sq;
+        drawWobblyLine(x, padTop, x, padTop + boardSize, '#2e2b27', i === 0 || i === 8 ? 3.0 : 2.1, i * 13);
+        drawWobblyLine(padLeft, y, padLeft + boardSize, y, '#2e2b27', i === 0 || i === 8 ? 3.0 : 2.1, i * 29);
+      }
+
+      // Hand-written rank numbers on the left (matching the '7, 6, 5, 4, 3, 2' in frame_03.jpg!)
+      ctx.font = '24px "Comic Sans MS", "Bradley Hand", cursive';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let r = 0; r < 8; r++) {
+        const dr = flipped ? 7 - r : r;
+        const rankNum = 8 - r;
+        ctx.fillStyle = r % 2 === 0 ? '#3b4d71' : '#8c3b3b';
+        ctx.fillText(String(rankNum), padLeft - 26, padTop + dr * sq + sq * 0.5);
+      }
+
+      // File letters at bottom
+      ctx.font = '19px "Comic Sans MS", "Bradley Hand", cursive';
+      for (let c = 0; c < 8; c++) {
+        const dc = flipped ? 7 - c : c;
+        ctx.fillStyle = '#4a5568';
+        ctx.fillText('abcdefgh'[c], padLeft + dc * sq + sq * 0.5, padTop + boardSize + 16);
+      }
+
+      // Draw hand-drawn red crayon circle around selected piece & red dots on valid moves (exactly like frame_03.jpg!)
+      if (selected) {
+        const sr = flipped ? 7 - selected.r : selected.r;
+        const sc = flipped ? 7 - selected.c : selected.c;
+        const sx = padLeft + sc * sq + sq * 0.5;
+        const sy = padTop + sr * sq + sq * 0.5;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(201, 59, 59, 0.85)';
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sq * 0.44, -0.3, Math.PI * 1.95);
+        ctx.stroke();
+        ctx.restore();
+
+        // Red crayon dots & target rings for valid moves
+        validMoves.forEach(m => {
+          const mr = flipped ? 7 - m.tr : m.tr;
+          const mc = flipped ? 7 - m.tc : m.tc;
+          const tx = padLeft + mc * sq + sq * 0.5;
+          const ty = padTop + mr * sq + sq * 0.5;
+
+          ctx.save();
+          if (board[m.tr][m.tc] || m.isEP) {
+            ctx.strokeStyle = 'rgba(201, 59, 59, 0.88)';
+            ctx.lineWidth = 3.2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.arc(tx, ty, sq * 0.42, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = 'rgba(195, 55, 55, 0.88)';
+            ctx.beginPath();
+            ctx.arc(tx, ty, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        });
+      }
+
+      // Draw all Doodle Pieces
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = board[r][c];
+          if (!p) continue;
+          const dr = flipped ? 7 - r : r;
+          const dc = flipped ? 7 - c : c;
+          const cx = padLeft + dc * sq + sq * 0.5;
+          const cy = padTop + dr * sq + sq * 0.5;
+          drawDoodlePiece(p, cx, cy, sq);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Click Handling & UI Updates
+    // -------------------------------------------------------------------------
+    canvas.addEventListener('click', e => {
+      if (gameOver || pendingPromotion) return;
+      if (turn === 'b' && document.getElementById('modeSelect').value === 'ai') return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+
+      const padLeft = 56;
+      const padTop = 28;
+      const boardSize = canvas.width - padLeft - 24;
+      const sq = boardSize / 8;
+
+      const dc = Math.floor((mx - padLeft) / sq);
+      const dr = Math.floor((my - padTop) / sq);
+      if (dc < 0 || dc >= 8 || dr < 0 || dr >= 8) return;
+
+      const r = flipped ? 7 - dr : dr;
+      const c = flipped ? 7 - dc : dc;
+
+      // Check if clicked square is a valid move destination
+      if (selected) {
+        const chosen = validMoves.find(m => m.tr === r && m.tc === c);
+        if (chosen) {
+          executeMove(selected.r, selected.c, chosen);
+          return;
+        }
+      }
+
+      // Otherwise select own piece
+      if (board[r][c] && board[r][c][0] === turn) {
+        selected = { r, c };
+        validMoves = getLegalMovesForSquare(r, c);
+      } else {
+        selected = null;
+        validMoves = [];
+      }
+      drawBoard();
+    });
+
+    // Promotion choice buttons
+    document.querySelectorAll('[data-promo]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!pendingPromotion) return;
+        const { fr, fc, move } = pendingPromotion;
+        move.promote = btn.dataset.promo;
+        pendingPromotion = null;
+        document.getElementById('promoModal').classList.remove('open');
+        executeMove(fr, fc, move);
+      });
+    });
+
+    function updateSidebarUI() {
+      const turnText = document.getElementById('turnText');
+      const statusSubText = document.getElementById('statusSubText');
+      const inChk = isKingInCheck(board, turn);
+
+      if (gameOver) {
+        if (inChk) {
+          const winner = turn === 'w' ? 'Nightberry Side (Black)' : 'Meadow Side (White)';
+          turnText.textContent = `🏆 Checkmate! ${winner} wins!`;
+        } else {
+          turnText.textContent = `🤝 Stalemate! Draw on Notebook Page`;
+        }
+        statusSubText.textContent = 'Click "★ New Page" to start a fresh doodle match.';
+      } else {
+        turnText.textContent = turn === 'w' ? "🐝 Meadow Side's Turn (White)" : "👾 Nightberry Side's Turn (Black)";
+        statusSubText.textContent = inChk
+          ? '⚠️ CHECK! Protect your Crowned King!'
+          : 'Click any doodle piece to see hand-drawn move dots.';
+      }
+
+      document.getElementById('capturedByWhite').textContent = capturedW.map(p => PIECE_EMOJI[p]).join(' ');
+      document.getElementById('capturedByBlack').textContent = capturedB.map(p => PIECE_EMOJI[p]).join(' ');
+      document.getElementById('moveCountLabel').textContent = `${Math.ceil(moveHistory.length / 2)} turns`;
+
+      const moveList = document.getElementById('moveList');
+      moveList.innerHTML = '';
+      for (let i = 0; i < moveHistory.length; i += 2) {
+        const row = document.createElement('div');
+        row.className = 'move-pair';
+        row.innerHTML = `<span>${(i / 2) + 1}.</span><span>${moveHistory[i]}</span><span>${moveHistory[i + 1] || ''}</span>`;
+        moveList.appendChild(row);
+      }
+      moveList.scrollTop = moveList.scrollHeight;
+    }
+
+    document.getElementById('btnUndo').addEventListener('click', () => {
+      if (stateSnapshots.length === 0) return;
+      const isAI = document.getElementById('modeSelect').value === 'ai';
+      let snap = stateSnapshots.pop();
+      if (isAI && snap.turn === 'b' && stateSnapshots.length > 0) {
+        snap = stateSnapshots.pop();
+      }
+      board = snap.board;
+      turn = snap.turn;
+      castling = snap.castling;
+      enPassant = snap.enPassant;
+      lastMove = snap.lastMove;
+      moveHistory = snap.moveHistory;
+      capturedW = snap.capturedW;
+      capturedB = snap.capturedB;
+      gameOver = snap.gameOver;
+      selected = null;
+      validMoves = [];
+      updateSidebarUI();
+      drawBoard();
+    });
+
+    document.getElementById('btnFlip').addEventListener('click', () => {
+      flipped = !flipped;
+      drawBoard();
+    });
+
+    document.getElementById('btnNewGame').addEventListener('click', initGame);
+
+    initGame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FireTrace — Wildfire Forensic Analysis (Ridgeview Incident)</title>
+  <style>
+    :root {
+      --bg-panel: #f4f3ef;
+      --bg-card: #ffffff;
+      --bg-header: #efede7;
+      --border: #d8d5cc;
+      --text-main: #1f211d;
+      --text-muted: #63665e;
+      --accent-fire: #e04f26;
+      --accent-amber: #d98218;
+      --accent-green: #2c7a4b;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: #1a1d1a;
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 38px 1fr 210px;
+      grid-template-columns: 1fr 310px;
+    }
+
+    /* Top Header Bar */
+    header.top-bar {
+      grid-column: 1 / -1;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: #1f211d;
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .brand-logo svg {
+      width: 16px;
+      height: 16px;
+      color: var(--accent-fire);
+    }
+
+    .subtitle-tag {
+      color: var(--text-muted);
+      border-right: 1px solid var(--border);
+      padding-right: 10px;
+    }
+
+    .incident-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .incident-loc {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .date-badge {
+      background: #e5e2d9;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #383a34;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .top-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: #3a3d35;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
+    }
+
+    .top-btn:hover {
+      background: #e4e1d8;
+    }
+
+    .top-btn.active {
+      background: #fff;
+      border-color: var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .badge-count {
+      background: var(--accent-fire);
+      color: #fff;
+      font-size: 10px;
+      padding: 0 5px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    /* Main 3D Viewport */
+    .viewport-wrap {
+      position: relative;
+      background: #1c221e;
+      overflow: hidden;
+    }
+
+    #terrainCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #terrainCanvas:active {
+      cursor: grabbing;
+    }
+
+    /* Compass & Map Overlays */
+    .compass-widget {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(24, 28, 24, 0.78);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: transform 0.2s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .compass-widget:hover {
+      background: rgba(34, 40, 34, 0.9);
+    }
+
+    .mode-toolbar {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 6px;
+      background: rgba(20, 24, 21, 0.82);
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(6px);
+    }
+
+    .mode-btn {
+      background: transparent;
+      color: #d7dbd4;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: var(--accent-fire);
+      color: #fff;
+    }
+
+    .probe-card {
+      position: absolute;
+      bottom: 42px;
+      right: 18px;
+      background: rgba(22, 25, 22, 0.88);
+      color: #eef0ec;
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.45;
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(6px);
+      min-width: 205px;
+    }
+
+    .probe-card .probe-coords {
+      font-family: var(--font-mono);
+      color: #9ba399;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .viewport-controls {
+      position: absolute;
+      bottom: 10px;
+      right: 18px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .vp-pill {
+      background: rgba(22, 25, 22, 0.85);
+      color: #e2e5df;
+      border: 1px solid rgba(255,255,255,0.16);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+    }
+
+    .vp-pill.active {
+      background: var(--accent-fire);
+      border-color: var(--accent-fire);
+      color: #fff;
+    }
+
+    /* Right Sidebar */
+    aside.right-sidebar {
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      font-size: 11.5px;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: #eae7df;
+      padding: 0 8px;
+    }
+
+    .sidebar-tab {
+      padding: 8px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .sidebar-tab.active {
+      color: var(--text-main);
+      border-bottom-color: var(--accent-fire);
+    }
+
+    .sidebar-section {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 11.5px;
+      margin-bottom: 8px;
+      color: #2c2e28;
+    }
+
+    .layer-row {
+      display: grid;
+      grid-template-columns: 18px 16px 1fr 56px 32px;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .layer-swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    .layer-name {
+      font-size: 11px;
+      color: #2c2f29;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .layer-slider {
+      width: 100%;
+      accent-color: #4a4e46;
+      height: 3px;
+      cursor: pointer;
+    }
+
+    .layer-pct {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* Incident Overview Table */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      row-gap: 4.5px;
+      font-size: 11px;
+    }
+
+    .kv-label {
+      color: var(--text-muted);
+    }
+
+    .kv-val {
+      font-weight: 500;
+      color: #1f211d;
+    }
+
+    .kv-val.mono {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      margin-right: 4px;
+    }
+
+    /* Weather & Fire Behavior Grid */
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .weather-box {
+      background: #eae7df;
+      border: 1px solid #dcd9d0;
+      border-radius: 5px;
+      padding: 6px 7px;
+    }
+
+    .w-label {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .w-value {
+      font-weight: 700;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .w-sub {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .wind-control {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .wind-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+    }
+
+    /* Bottom Dock: Timeline + 3 Charts + Key Events */
+    section.bottom-dock {
+      grid-column: 1 / -1;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      height: 210px;
+    }
+
+    .timeline-and-charts {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 14px;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .timeline-title {
+      font-weight: 700;
+      font-size: 11.5px;
+    }
+
+    .current-time-pill {
+      background: #262924;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .scrubber-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .ctrl-btn {
+      width: 26px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #262925;
+    }
+
+    .ctrl-btn:hover {
+      background: #eae7df;
+    }
+
+    .ctrl-btn.playing {
+      background: var(--accent-fire);
+      color: #fff;
+      border-color: var(--accent-fire);
+    }
+
+    .scrubber-track-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #timeSlider {
+      width: 100%;
+      accent-color: var(--accent-fire);
+      cursor: pointer;
+      height: 5px;
+    }
+
+    .time-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 3px;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .chart-card {
+      background: #ebe8e0;
+      border: 1px solid #dad6cc;
+      border-radius: 5px;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #363932;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .chart-canvas {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      display: block;
+    }
+
+    /* Key Events Panel */
+    .events-panel {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .event-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .event-item {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .event-item:hover {
+      background: #e6e3da;
+    }
+
+    .event-item.active {
+      background: #e2dfd5;
+      font-weight: 600;
+    }
+
+    .ev-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .ev-time {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <a href="../../index.html" class="brand-logo" title="Back to 6-Project Showcase">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9.5 6 7 8.5 7 12.5C7 16.09 9.91 19 13.5 19C13.1 17.5 13.5 15.5 15 14C15.5 16 15.2 18.2 14 20.5C17.5 19.5 20 16.3 20 12.5C20 7.5 16 4 12 2ZM10.5 19.5C8.2 18.5 6.5 16.5 6 14C4.8 15.5 4.5 17.5 5.5 19.5C6.8 21.2 9 22 11.5 22C11 21.2 10.7 20.4 10.5 19.5Z"/></svg>
+        FireTrace
+      </a>
+      <span class="subtitle-tag">Wildfire Forensic Analysis</span>
+      <div class="incident-pill">
+        <span>Ridgeview Incident</span>
+        <span class="incident-loc">— San Gabriel Mountains, CA</span>
+      </div>
+      <span class="date-badge">Aug 14, 2024 – Aug 18, 2024</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="top-btn active" id="btnModeOrbit">Incident</button>
+      <button class="top-btn" id="btnDroneToggle">Drones <span class="badge-count">3</span></button>
+      <button class="top-btn" id="btnRetardantMode">Resources <span class="badge-count" id="dropCountBadge">6</span></button>
+      <button class="top-btn" id="btnResetCamera">Reset View</button>
+    </div>
+  </header>
+
+  <!-- Center 3D Terrain Viewport -->
+  <main class="viewport-wrap">
+    <canvas id="terrainCanvas"></canvas>
+
+    <div class="compass-widget" id="compassBtn" title="Click to snap North">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="12 3 16 14 12 11 8 14 12 3" fill="#e04f26" stroke="#e04f26"/>
+        <polygon points="12 21 16 14 12 16 8 14 12 21" fill="#9ba399" stroke="none"/>
+      </svg>
+    </div>
+
+    <div class="mode-toolbar">
+      <button class="mode-btn active" data-tool="inspect">Orbit / Inspect</button>
+      <button class="mode-btn" data-tool="drop">+ Drop Retardant Line</button>
+      <button class="mode-btn" data-tool="spot">+ Ignite Spot Fire</button>
+    </div>
+
+    <div class="probe-card" id="probeCard">
+      <div id="probeTitle"><strong>1,173 m · 31° slope · SSW-facing</strong></div>
+      <div id="probePerimeter" style="color:#e79c52">● Inside active fire perimeter</div>
+      <div id="probeFuel">Mixed conifer, heavy (Fuel Model TU5)</div>
+      <div class="probe-coords" id="probeCoords">34°17'44"N  117°51'08"W</div>
+    </div>
+
+    <div class="viewport-controls">
+      <button class="vp-pill active" id="btn3DToggle">3D</button>
+      <button class="vp-pill" id="btnExagToggle">2.5× Z</button>
+    </div>
+  </main>
+
+  <!-- Right Sidebar -->
+  <aside class="right-sidebar">
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active">Layers</div>
+      <div class="sidebar-tab" id="tabAnalysis">Analysis</div>
+      <div class="sidebar-tab" id="tabNotes">Evidence</div>
+    </div>
+
+    <!-- Layers Section -->
+    <div class="sidebar-section">
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="terrain" />
+        <span class="layer-swatch" style="background:linear-gradient(135deg,#4f6246,#8d7f64)"></span>
+        <span class="layer-name">Terrain (3D)</span>
+        <input type="range" class="layer-slider" min="20" max="100" value="100" data-opacity="terrain" />
+        <span class="layer-pct">100%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="contours" />
+        <span class="layer-swatch" style="background:#5c6f52"></span>
+        <span class="layer-name">Topo Contours</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="85" data-opacity="contours" />
+        <span class="layer-pct">85%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="burnScar" />
+        <span class="layer-swatch" style="background:#5a2518"></span>
+        <span class="layer-name">Burn Scar (dNBR)</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="90" data-opacity="burnScar" />
+        <span class="layer-pct">90%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="fireSpread" />
+        <span class="layer-swatch" style="background:#e04f26"></span>
+        <span class="layer-name">Fire Spread (Modeled)</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="100" data-opacity="fireSpread" />
+        <span class="layer-pct">100%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="ignitionProb" />
+        <span class="layer-swatch" style="background:#f59e0b"></span>
+        <span class="layer-name">Hotspots & Vectors</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="95" data-opacity="ignitionProb" />
+        <span class="layer-pct">95%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="windVectors" />
+        <span class="layer-swatch" style="background:#93c5fd"></span>
+        <span class="layer-name">Weather (Wind Vectors)</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="75" data-opacity="windVectors" />
+        <span class="layer-pct">75%</span>
+      </div>
+      <div class="layer-row">
+        <input type="checkbox" checked data-layer="suppression" />
+        <span class="layer-swatch" style="background:#2c7a4b"></span>
+        <span class="layer-name">Suppression (Drops & Line)</span>
+        <input type="range" class="layer-slider" min="0" max="100" value="100" data-opacity="suppression" />
+        <span class="layer-pct">100%</span>
+      </div>
+    </div>
+
+    <!-- Incident Overview -->
+    <div class="sidebar-section">
+      <div class="section-header">
+        <span>Incident Overview</span>
+        <span style="color:var(--text-muted);font-weight:400;font-size:10.5px">CA-LAC-2024-0176</span>
+      </div>
+      <div class="kv-grid">
+        <span class="kv-label">Incident Name</span>
+        <span class="kv-val">Ridgeview Incident</span>
+        <span class="kv-label">Location</span>
+        <span class="kv-val">San Gabriel Mountains, CA</span>
+        <span class="kv-label">Start (Est.)</span>
+        <span class="kv-val mono">Aug 14, 2024 14:26</span>
+        <span class="kv-label">Contained</span>
+        <span class="kv-val mono">Aug 18, 2024 11:20</span>
+        <span class="kv-label">Active Acres</span>
+        <span class="kv-val mono" id="liveAcresLabel">7,840 / 12,480 acres</span>
+        <span class="kv-label">Cause (Prelim.)</span>
+        <span class="kv-val">Under Investigation</span>
+        <span class="kv-label">Analysis Status</span>
+        <span class="kv-val"><span class="status-dot"></span>In Progress</span>
+      </div>
+    </div>
+
+    <!-- Weather & Fire Behavior -->
+    <div class="sidebar-section" style="border-bottom:none">
+      <div class="section-header">
+        <span>Weather & Fire Behavior</span>
+        <span style="color:var(--text-muted);font-weight:400;font-size:10px">(at cursor)</span>
+      </div>
+      <div class="weather-grid">
+        <div class="weather-box">
+          <div class="w-label"><span>Wind</span><span>🧭</span></div>
+          <div class="w-value" id="valWind">16 mph</div>
+          <div class="w-sub" id="valWindDir">W (273°)</div>
+        </div>
+        <div class="weather-box">
+          <div class="w-label"><span>Temp</span><span>🌡️</span></div>
+          <div class="w-value" id="valTemp">35 °C</div>
+          <div class="w-sub">Peak diurnal</div>
+        </div>
+        <div class="weather-box">
+          <div class="w-label"><span>RH</span><span>💧</span></div>
+          <div class="w-value" id="valRH">11%</div>
+          <div class="w-sub">Critical dry</div>
+        </div>
+        <div class="weather-box">
+          <div class="w-label"><span>Fuel Moist.</span><span>🌲</span></div>
+          <div class="w-value" id="valFuel">3%</div>
+          <div class="w-sub">10-hr dead</div>
+        </div>
+        <div class="weather-box">
+          <div class="w-label"><span>ERC</span><span>🔥</span></div>
+          <div class="w-value" id="valERC">84</div>
+          <div class="w-sub">97th pct</div>
+        </div>
+        <div class="weather-box">
+          <div class="w-label"><span>Flame Len</span><span>📏</span></div>
+          <div class="w-value" id="valFlame">12–19 ft</div>
+          <div class="w-sub">Active crown</div>
+        </div>
+      </div>
+
+      <div class="wind-control">
+        <div class="wind-row">
+          <span>Simulate Wind Speed Override</span>
+          <strong id="windSliderLabel">16 mph</strong>
+        </div>
+        <input type="range" id="windSpeedSlider" min="4" max="45" value="16" class="layer-slider" />
+        <div class="wind-row">
+          <span>Wind Azimuth (°)</span>
+          <strong id="windDirSliderLabel">273° (W → E/NE)</strong>
+        </div>
+        <input type="range" id="windDirSlider" min="180" max="340" value="273" class="layer-slider" />
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom Timeline & Forensic Telemetry -->
+  <section class="bottom-dock">
+    <div class="timeline-and-charts">
+      <div class="timeline-header">
+        <span class="timeline-title">Timeline</span>
+        <span class="current-time-pill" id="currentTimeBadge">Aug 15, 16:00</span>
+        <span style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono)">Aug 14, 14:00 – Aug 18, 12:00</span>
+      </div>
+
+      <div class="scrubber-bar">
+        <button class="ctrl-btn playing" id="btnPlayPause" title="Play / Pause Simulation">❚❚</button>
+        <button class="ctrl-btn" id="btnStepBack" title="Step Backward">⏮</button>
+        <button class="ctrl-btn" id="btnStepFwd" title="Step Forward">⏭</button>
+        <button class="ctrl-btn" id="btnSpeed" style="width:36px;font-family:var(--font-mono)">1×</button>
+
+        <div class="scrubber-track-wrap">
+          <input type="range" id="timeSlider" min="0" max="1000" value="340" />
+          <div class="time-ticks">
+            <span>Aug 14 14:00</span>
+            <span>Aug 15 00:00</span>
+            <span>Aug 15 12:00</span>
+            <span>Aug 16 00:00</span>
+            <span>Aug 16 12:00</span>
+            <span>Aug 17 00:00</span>
+            <span>Aug 18 12:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>Fire Area (acres)</span>
+            <span id="chartAcresNow" style="font-family:var(--font-mono);color:var(--accent-fire)">7,840 ac</span>
+          </div>
+          <canvas class="chart-canvas" id="chartArea"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>Rate of Spread (chains/hr)</span>
+            <span id="chartRosNow" style="font-family:var(--font-mono);color:var(--accent-amber)">28 ch/h</span>
+          </div>
+          <canvas class="chart-canvas" id="chartRos"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>Elevation Profile (selected path)</span>
+            <span style="font-family:var(--font-mono);color:#2c7a4b">680m → 2,140m</span>
+          </div>
+          <canvas class="chart-canvas" id="chartElev"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Events List -->
+    <div class="events-panel">
+      <div class="section-header" style="margin-bottom:4px">
+        <span>Key Events</span>
+        <span style="font-size:10px;color:var(--text-muted);font-weight:400">Click to jump</span>
+      </div>
+      <div class="event-list" id="eventList">
+        <div class="event-item" data-progress="20">
+          <span class="ev-dot" style="background:#ef4444"></span>
+          <span>Ignition (est.)</span>
+          <span class="ev-time">Aug 14, 14:26</span>
+        </div>
+        <div class="event-item" data-progress="95">
+          <span class="ev-dot" style="background:#f97316"></span>
+          <span>Rapid Slope Run</span>
+          <span class="ev-time">Aug 14, 18:00</span>
+        </div>
+        <div class="event-item" data-progress="210">
+          <span class="ev-dot" style="background:#eab308"></span>
+          <span>Canyon Crest Breach</span>
+          <span class="ev-time">Aug 15, 00:00</span>
+        </div>
+        <div class="event-item" data-progress="265">
+          <span class="ev-dot" style="background:#f59e0b"></span>
+          <span>Spot Fire (prob. 0.88)</span>
+          <span class="ev-time">Aug 15, 03:12</span>
+        </div>
+        <div class="event-item active" data-progress="340">
+          <span class="ev-dot" style="background:#22c55e"></span>
+          <span>VLAT Retardant Drop #4</span>
+          <span class="ev-time">Aug 15, 12:00</span>
+        </div>
+        <div class="event-item" data-progress="640">
+          <span class="ev-dot" style="background:#3b82f6"></span>
+          <span>East Flank Dozer Line</span>
+          <span class="ev-time">Aug 16, 19:40</span>
+        </div>
+        <div class="event-item" data-progress="960">
+          <span class="ev-dot" style="background:#64748b"></span>
+          <span>100% Containment</span>
+          <span class="ev-time">Aug 18, 11:20</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // =========================================================================
+    // FireTrace 3D Terrain & Forensic Spread Engine
+    // =========================================================================
+    const terrainCanvas = document.getElementById('terrainCanvas');
+    const ctx = terrainCanvas.getContext('2d');
+
+    const GRID_W = 66;
+    const GRID_H = 66;
+    const heightMap = new Float32Array(GRID_W * GRID_H);
+    const ignitionTimeMap = new Float32Array(GRID_W * GRID_H);
+    const vegetationMap = new Float32Array(GRID_W * GRID_H);
+
+    // Precompute San Gabriel Mountains ridge & canyon topography
+    function buildTerrain() {
+      for (let gz = 0; gz < GRID_H; gz++) {
+        for (let gx = 0; gx < GRID_W; gx++) {
+          const nx = (gx / GRID_W) * 2 - 1;
+          const nz = (gz / GRID_H) * 2 - 1;
+
+          // Main diagonal San Gabriel ridge running SW -> NE
+          const ridgeDist = Math.abs((nx * 0.78 - nz * 0.62) + 0.08);
+          const mainRidge = Math.exp(-ridgeDist * ridgeDist * 4.5) * 1.15;
+
+          // Secondary Oak Flats peak & Canyon Creek gorge
+          const peak2 = Math.exp(-((nx - 0.45) ** 2 + (nz - 0.25) ** 2) * 8.0) * 0.72;
+          const peak3 = Math.exp(-((nx + 0.45) ** 2 + (nz + 0.35) ** 2) * 6.5) * 0.55;
+          const canyon = -Math.exp(-((nx + 0.25) ** 2 + (nz - 0.2) ** 2) * 10.0) * 0.42;
+
+          // High-frequency craggy detail
+          const detail =
+            0.14 * Math.sin(nx * 9.2 + nz * 6.1) * Math.cos(nx * 5.4 - nz * 8.3) +
+            0.07 * Math.sin(nx * 19.0 + nz * 14.0) +
+            0.035 * Math.cos(nx * 31.0 - nz * 27.0);
+
+          const h = Math.max(0.04, mainRidge + peak2 + peak3 + canyon + detail + 0.18);
+          heightMap[gz * GRID_W + gx] = h;
+          vegetationMap[gz * GRID_W + gx] = 0.5 + 0.5 * Math.sin(nx * 7 + nz * 11);
+        }
+      }
+    }
+
+    // Ignition origin at SW lower canyon (gx=20, gz=45) spreading NE up the ridge
+    const IGN_X = 20;
+    const IGN_Z = 46;
+
+    function recomputeFireSpread(windSpeed = 16, windAzimuth = 273) {
+      const windRad = ((windAzimuth - 180) * Math.PI) / 180;
+      const wx = Math.cos(windRad) * (windSpeed / 16);
+      const wz = -Math.sin(windRad) * (windSpeed / 16);
+
+      for (let gz = 0; gz < GRID_H; gz++) {
+        for (let gx = 0; gx < GRID_W; gx++) {
+          const dx = gx - IGN_X;
+          const dz = gz - IGN_Z;
+
+          // Elliptical anisotropic propagation driven by wind + upslope
+          const alongWind = dx * 0.72 - dz * 0.69 + (wx * dx + wz * dz) * 0.18;
+          const crossWind = dx * 0.69 + dz * 0.72;
+
+          const effectiveDist = Math.sqrt(
+            Math.pow(Math.max(0, alongWind) * 0.52 + Math.min(0, alongWind) * 1.45, 2) +
+            Math.pow(crossWind * 1.18, 2)
+          );
+
+          const noise =
+            2.2 * Math.sin(gx * 0.37 + gz * 0.41) +
+            1.1 * Math.cos(gx * 0.73 - gz * 0.59);
+
+          // Normalize to [0..1000] timeline units
+          let tIgnite = (effectiveDist + noise) * 23.5;
+          if (dx * dx + dz * dz < 4) tIgnite = 10;
+          ignitionTimeMap[gz * GRID_W + gx] = Math.max(10, tIgnite);
+        }
+      }
+    }
+
+    buildTerrain();
+    recomputeFireSpread(16, 273);
+
+    // State
+    const state = {
+      timeProgress: 340, // 0..1000
+      playing: true,
+      speed: 1,
+      yaw: -0.58,
+      pitch: 0.62,
+      zoom: 1.04,
+      is3D: true,
+      zExag: 1.0,
+      activeTool: 'inspect',
+      showDrones: true,
+      windSpeed: 16,
+      windAzimuth: 273,
+      layers: {
+        terrain: { visible: true, opacity: 1.0 },
+        contours: { visible: true, opacity: 0.85 },
+        burnScar: { visible: true, opacity: 0.9 },
+        fireSpread: { visible: true, opacity: 1.0 },
+        ignitionProb: { visible: true, opacity: 0.95 },
+        windVectors: { visible: true, opacity: 0.75 },
+        suppression: { visible: true, opacity: 1.0 }
+      },
+      retardantDrops: [
+        { x1: 36, z1: 20, x2: 46, z2: 29, time: 300 },
+        { x1: 28, z1: 18, x2: 37, z2: 19, time: 330 },
+        { x1: 45, z1: 31, x2: 49, z2: 42, time: 450 }
+      ],
+      spotFires: [
+        { gx: 39, gz: 25, time: 265, label: 'Spot Fire (Aug 15, 03:12)' }
+      ],
+      waypoints: [
+        { gx: 20, gz: 46, time: 20, label: 'Ignition\nAug 14, 14:26', isOrigin: true },
+        { gx: 26, gz: 39, time: 95, label: 'Aug 14, 18:00' },
+        { gx: 32, gz: 33, time: 210, label: 'Aug 15, 00:00' },
+        { gx: 37, gz: 27, time: 280, label: 'Aug 15, 06:00' },
+        { gx: 42, gz: 21, time: 340, label: 'Aug 15, 12:00' }
+      ],
+      windParticles: Array.from({ length: 55 }, () => ({
+        gx: Math.random() * (GRID_W - 1),
+        gz: Math.random() * (GRID_H - 1),
+        age: Math.random() * 100
+      }))
+    };
+
+    // Resize handling
+    function resizeAllCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = terrainCanvas.parentElement.getBoundingClientRect();
+      terrainCanvas.width = rect.width * dpr;
+      terrainCanvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ['chartArea', 'chartRos', 'chartElev'].forEach(id => {
+        const c = document.getElementById(id);
+        const r = c.getBoundingClientRect();
+        c.width = r.width * dpr;
+        c.height = r.height * dpr;
+      });
+    }
+    window.addEventListener('resize', resizeAllCanvases);
+    resizeAllCanvases();
+
+    // 3D Projection Helper
+    function projectPoint(gx, gz, h, width, height) {
+      const nx = (gx / (GRID_W - 1)) - 0.5;
+      const nz = (gz / (GRID_H - 1)) - 0.5;
+      const ny = state.is3D ? (h * 0.28 * state.zExag) : 0;
+
+      const cosY = Math.cos(state.yaw);
+      const sinY = Math.sin(state.yaw);
+      const rx = nx * cosY - nz * sinY;
+      const rz = nx * sinY + nz * cosY;
+
+      const pitch = state.is3D ? state.pitch : 1.48;
+      const cosP = Math.cos(pitch);
+      const sinP = Math.sin(pitch);
+
+      const ry = ny * cosP - rz * sinP;
+      const depth = ny * sinP + rz * cosP + 1.65;
+
+      const scale = Math.min(width, height) * 1.18 * state.zoom / Math.max(0.4, depth);
+      return {
+        x: width * 0.48 + rx * scale,
+        y: height * 0.58 - ry * scale,
+        depth
+      };
+    }
+
+    // Format simulation time (0..1000 -> Aug 14 14:00 to Aug 18 12:00 = 94 hours)
+    function formatSimTime(progress) {
+      const totalHours = (progress / 1000) * 94;
+      const startHourAbs = 14 * 24 + 14; // Aug 14, 14:00
+      const curHourAbs = startHourAbs + totalHours;
+      const day = Math.floor(curHourAbs / 24);
+      const hr = Math.floor(curHourAbs % 24);
+      const min = Math.floor((curHourAbs * 60) % 60);
+      return `Aug ${day}, ${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+
+    // Render 3D Scene
+    function renderScene() {
+      const width = terrainCanvas.width / (window.devicePixelRatio || 1);
+      const height = terrainCanvas.height / (window.devicePixelRatio || 1);
+
+      // Atmospheric mountain sky backdrop
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#c8ccc5');
+      skyGrad.addColorStop(0.28, '#8d968a');
+      skyGrad.addColorStop(1, '#1d231e');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Project all vertices
+      const proj = new Array(GRID_W * GRID_H);
+      for (let gz = 0; gz < GRID_H; gz++) {
+        for (let gx = 0; gx < GRID_W; gx++) {
+          const idx = gz * GRID_W + gx;
+          proj[idx] = projectPoint(gx, gz, heightMap[idx], width, height);
+        }
+      }
+
+      // Collect quads for painter's algorithm sorting
+      const quads = [];
+      for (let gz = 0; gz < GRID_H - 1; gz++) {
+        for (let gx = 0; gx < GRID_W - 1; gx++) {
+          const i00 = gz * GRID_W + gx;
+          const i10 = i00 + 1;
+          const i01 = i00 + GRID_W;
+          const i11 = i01 + 1;
+          const avgDepth = (proj[i00].depth + proj[i10].depth + proj[i01].depth + proj[i11].depth) * 0.25;
+          quads.push({ gx, gz, i00, i10, i01, i11, avgDepth });
+        }
+      }
+      quads.sort((a, b) => b.avgDepth - a.avgDepth);
+
+      const tNow = state.timeProgress;
+
+      // Draw terrain cells
+      for (let q = 0; q < quads.length; q++) {
+        const { gx, gz, i00, i10, i01, i11 } = quads[q];
+        const p0 = proj[i00], p1 = proj[i10], p2 = proj[i11], p3 = proj[i01];
+
+        const h0 = heightMap[i00];
+        const dhx = heightMap[i10] - h0;
+        const dhz = heightMap[i01] - h0;
+
+        // Sun directional shading from WSW
+        const shade = Math.max(0.32, Math.min(1.22, 0.78 + dhx * 6.5 - dhz * 4.5));
+
+        // Base terrain color (pine green in valleys -> dry chaparral/rock on steep ridges)
+        const veg = vegetationMap[i00];
+        let r = (74 + h0 * 52 + veg * 12) * shade;
+        let g = (88 + h0 * 38 + veg * 16) * shade;
+        let b = (62 + h0 * 26) * shade;
+
+        // Check fire status at this cell
+        let tIgn = ignitionTimeMap[i00];
+        // Spot fire acceleration
+        for (const sf of state.spotFires) {
+          if (tNow >= sf.time) {
+            const dSpot = Math.hypot(gx - sf.gx, gz - sf.gz);
+            const spotIgn = sf.time + dSpot * 18;
+            if (spotIgn < tIgn) tIgn = spotIgn;
+          }
+        }
+
+        const dt = tNow - tIgn;
+        if (dt >= 0 && tIgn < 740) {
+          if (dt < 26 && state.layers.fireSpread.visible) {
+            // Active flaming front (intense orange-red-yellow)
+            const flamePulse = 0.85 + 0.15 * Math.sin(Date.now() * 0.01 + gx * 0.7);
+            const alpha = state.layers.fireSpread.opacity;
+            r = r * (1 - alpha) + 248 * flamePulse * alpha;
+            g = g * (1 - alpha) + (98 - dt * 2.1) * flamePulse * alpha;
+            b = b * (1 - alpha) + 32 * alpha;
+          } else if (state.layers.burnScar.visible) {
+            // Burn scar (charred dark brown/reddish dNBR severity)
+            const scarAlpha = state.layers.burnScar.opacity * 0.84;
+            const smolder = dt < 85 ? (85 - dt) / 85 : 0;
+            r = r * (1 - scarAlpha) + (68 + smolder * 115) * scarAlpha;
+            g = g * (1 - scarAlpha) + (34 + smolder * 28) * scarAlpha;
+            b = b * (1 - scarAlpha) + 26 * scarAlpha;
+          }
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+
+        ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
+        ctx.fill();
+
+        // Topographic contour / wireframe overlay
+        if (state.layers.contours.visible && (gx % 3 === 0 || gz % 3 === 0)) {
+          ctx.strokeStyle = `rgba(255,255,240,${0.07 * state.layers.contours.opacity})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+
+      // Draw Wind Vectors Layer
+      if (state.layers.windVectors.visible) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(220, 238, 255, ${0.42 * state.layers.windVectors.opacity})`;
+        ctx.lineWidth = 1.2;
+        const windRad = ((state.windAzimuth - 180) * Math.PI) / 180;
+        const vx = Math.cos(windRad) * 0.14 * (state.windSpeed / 16);
+        const vz = -Math.sin(windRad) * 0.14 * (state.windSpeed / 16);
+
+        state.windParticles.forEach(wp => {
+          wp.gx += vx;
+          wp.gz += vz;
+          wp.age += 1;
+          if (wp.gx < 2 || wp.gx >= GRID_W - 2 || wp.gz < 2 || wp.gz >= GRID_H - 2 || wp.age > 90) {
+            wp.gx = 4 + Math.random() * (GRID_W - 8);
+            wp.gz = 4 + Math.random() * (GRID_H - 8);
+            wp.age = 0;
+          }
+          const idx = Math.floor(wp.gz) * GRID_W + Math.floor(wp.gx);
+          const pA = projectPoint(wp.gx, wp.gz, heightMap[idx] + 0.08, width, height);
+          const pB = projectPoint(wp.gx + vx * 14, wp.gz + vz * 14, heightMap[idx] + 0.08, width, height);
+          ctx.beginPath();
+          ctx.moveTo(pA.x, pA.y);
+          ctx.lineTo(pB.x, pB.y);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // Draw Suppression Drops & Dozer Lines
+      if (state.layers.suppression.visible) {
+        ctx.save();
+        ctx.globalAlpha = state.layers.suppression.opacity;
+        state.retardantDrops.forEach(drop => {
+          if (tNow >= drop.time - 80) {
+            const pStart = projectPoint(
+              drop.x1,
+              drop.z1,
+              heightMap[Math.floor(drop.z1) * GRID_W + Math.floor(drop.x1)] + 0.03,
+              width,
+              height
+            );
+            const pEnd = projectPoint(
+              drop.x2,
+              drop.z2,
+              heightMap[Math.floor(drop.z2) * GRID_W + Math.floor(drop.x2)] + 0.03,
+              width,
+              height
+            );
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([6, 3]);
+            ctx.beginPath();
+            ctx.moveTo(pStart.x, pStart.y);
+            ctx.lineTo(pEnd.x, pEnd.y);
+            ctx.stroke();
+          }
+        });
+        ctx.restore();
+      }
+
+      // Draw Fire Spread Vectors & Waypoint Callouts (matching Slide 2 screenshot)
+      if (state.layers.ignitionProb.visible) {
+        ctx.save();
+        ctx.globalAlpha = state.layers.ignitionProb.opacity;
+
+        // Draw connecting dashed trajectory & orange arrows between reached waypoints
+        for (let i = 0; i < state.waypoints.length - 1; i++) {
+          const wpA = state.waypoints[i];
+          const wpB = state.waypoints[i + 1];
+          if (tNow >= wpA.time) {
+            const pA = proj[wpA.gz * GRID_W + wpA.gx];
+            const pB = proj[wpB.gz * GRID_W + wpB.gx];
+
+            // Trajectory arrow
+            ctx.strokeStyle = '#ff6b35';
+            ctx.lineWidth = 2.2;
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath();
+            ctx.moveTo(pA.x, pA.y);
+            ctx.lineTo(pB.x, pB.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Arrowhead at midpoint
+            const mx = (pA.x + pB.x) * 0.5;
+            const my = (pA.y + pB.y) * 0.5;
+            const ang = Math.atan2(pB.y - pA.y, pB.x - pA.x);
+            ctx.fillStyle = '#ff6b35';
+            ctx.beginPath();
+            ctx.moveTo(mx + Math.cos(ang) * 6, my + Math.sin(ang) * 6);
+            ctx.lineTo(mx + Math.cos(ang - 2.5) * 6, my + Math.sin(ang - 2.5) * 6);
+            ctx.lineTo(mx + Math.cos(ang + 2.5) * 6, my + Math.sin(ang + 2.5) * 6);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        // Draw waypoint badges
+        state.waypoints.forEach(wp => {
+          if (tNow >= wp.time - 15) {
+            const p = proj[wp.gz * GRID_W + wp.gx];
+
+            // Glowing dot
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, wp.isOrigin ? 7 : 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = wp.isOrigin ? '#fbbf24' : '#f97316';
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+
+            // Callout label pill
+            const lines = wp.label.split('\n');
+            ctx.font = '600 10.5px Inter, sans-serif';
+            const boxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 12;
+            const boxH = lines.length * 13 + 6;
+            const lx = p.x + 10;
+            const ly = p.y - boxH * 0.5;
+
+            ctx.fillStyle = 'rgba(20, 23, 20, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(lx, ly, boxW, boxH, 4);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = '#f3f4f6';
+            lines.forEach((line, idx) => {
+              ctx.fillText(line, lx + 6, ly + 12 + idx * 13);
+            });
+          }
+        });
+
+        // Geographic landmarks (Canyon Creek, Oak Flats 1120m)
+        const oakP = proj[48 * GRID_W + 52];
+        ctx.fillStyle = 'rgba(20,24,20,0.75)';
+        ctx.fillRect(oakP.x - 4, oakP.y - 12, 82, 26);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '600 10px Inter, sans-serif';
+        ctx.fillText('▲ Oak Flats', oakP.x + 2, oakP.y - 1);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('1120 m', oakP.x + 12, oakP.y + 10);
+
+        ctx.restore();
+      }
+    }
+
+    // Render Bottom Telemetry Charts
+    function renderCharts() {
+      const dpr = window.devicePixelRatio || 1;
+      const prog = state.timeProgress / 1000;
+
+      // 1. Fire Area Chart (S-curve up to 12,480 acres)
+      const cArea = document.getElementById('chartArea');
+      const ctxA = cArea.getContext('2d');
+      const wA = cArea.width / dpr, hA = cArea.height / dpr;
+      ctxA.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxA.clearRect(0, 0, wA, hA);
+
+      ctxA.beginPath();
+      ctxA.moveTo(0, hA);
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const sCurve = 1 / (1 + Math.exp(-(u - 0.34) * 9.5));
+        const x = u * wA;
+        const y = hA - 4 - sCurve * (hA - 12);
+        ctxA.lineTo(x, y);
+      }
+      ctxA.lineTo(wA, hA);
+      ctxA.closePath();
+      ctxA.fillStyle = 'rgba(224, 79, 38, 0.22)';
+      ctxA.fill();
+
+      ctxA.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const sCurve = 1 / (1 + Math.exp(-(u - 0.34) * 9.5));
+        const x = u * wA;
+        const y = hA - 4 - sCurve * (hA - 12);
+        if (i === 0) ctxA.moveTo(x, y);
+        else ctxA.lineTo(x, y);
+      }
+      ctxA.strokeStyle = '#c85a32';
+      ctxA.lineWidth = 1.6;
+      ctxA.stroke();
+
+      // Cursor line
+      const curX = prog * wA;
+      ctxA.strokeStyle = '#1f211d';
+      ctxA.lineWidth = 1.2;
+      ctxA.beginPath();
+      ctxA.moveTo(curX, 0);
+      ctxA.lineTo(curX, hA);
+      ctxA.stroke();
+
+      const curAcres = Math.round(12480 / (1 + Math.exp(-(prog - 0.34) * 9.5)));
+      document.getElementById('chartAcresNow').textContent = `${curAcres.toLocaleString()} ac`;
+      document.getElementById('liveAcresLabel').textContent = `${curAcres.toLocaleString()} / 12,480 acres`;
+
+      // 2. Rate of Spread Chart (chains/hr)
+      const cRos = document.getElementById('chartRos');
+      const ctxR = cRos.getContext('2d');
+      const wR = cRos.width / dpr, hR = cRos.height / dpr;
+      ctxR.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxR.clearRect(0, 0, wR, hR);
+
+      const rosFunc = u => {
+        const p1 = Math.exp(-((u - 0.18) ** 2) * 95) * 0.72;
+        const p2 = Math.exp(-((u - 0.33) ** 2) * 110) * 0.92;
+        const p3 = Math.exp(-((u - 0.52) ** 2) * 70) * 0.35;
+        return Math.min(1, (p1 + p2 + p3) * (state.windSpeed / 16));
+      };
+
+      ctxR.beginPath();
+      ctxR.moveTo(0, hR);
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const x = u * wR;
+        const y = hR - 4 - rosFunc(u) * (hR - 12);
+        ctxR.lineTo(x, y);
+      }
+      ctxR.lineTo(wR, hR);
+      ctxR.closePath();
+      ctxR.fillStyle = 'rgba(217, 130, 24, 0.22)';
+      ctxR.fill();
+
+      ctxR.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const x = u * wR;
+        const y = hR - 4 - rosFunc(u) * (hR - 12);
+        if (i === 0) ctxR.moveTo(x, y);
+        else ctxR.lineTo(x, y);
+      }
+      ctxR.strokeStyle = '#b45309';
+      ctxR.lineWidth = 1.6;
+      ctxR.stroke();
+
+      ctxR.strokeStyle = '#1f211d';
+      ctxR.beginPath();
+      ctxR.moveTo(prog * wR, 0);
+      ctxR.lineTo(prog * wR, hR);
+      ctxR.stroke();
+
+      const curRos = Math.round(rosFunc(prog) * 42);
+      document.getElementById('chartRosNow').textContent = `${curRos} ch/h`;
+
+      // 3. Elevation Profile Chart
+      const cElev = document.getElementById('chartElev');
+      const ctxE = cElev.getContext('2d');
+      const wE = cElev.width / dpr, hE = cElev.height / dpr;
+      ctxE.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxE.clearRect(0, 0, wE, hE);
+
+      ctxE.beginPath();
+      ctxE.moveTo(0, hE);
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const elev = 0.22 + 0.62 * u + 0.12 * Math.sin(u * 14);
+        const x = u * wE;
+        const y = hE - 4 - elev * (hE - 12);
+        ctxE.lineTo(x, y);
+      }
+      ctxE.lineTo(wE, hE);
+      ctxE.closePath();
+      ctxE.fillStyle = 'rgba(79, 114, 78, 0.28)';
+      ctxE.fill();
+
+      ctxE.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const u = i / 60;
+        const elev = 0.22 + 0.62 * u + 0.12 * Math.sin(u * 14);
+        const x = u * wE;
+        const y = hE - 4 - elev * (hE - 12);
+        if (i === 0) ctxE.moveTo(x, y);
+        else ctxE.lineTo(x, y);
+      }
+      ctxE.strokeStyle = '#3f6240';
+      ctxR.lineWidth = 1.6;
+      ctxE.stroke();
+
+      ctxE.strokeStyle = '#1f211d';
+      ctxE.beginPath();
+      ctxE.moveTo(prog * wE, 0);
+      ctxE.lineTo(prog * wE, hE);
+      ctxE.stroke();
+    }
+
+    // Mouse Orbit & Interactive Tools on 3D Canvas
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    terrainCanvas.addEventListener('mousedown', e => {
+      const rect = terrainCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      if (state.activeTool === 'drop') {
+        const gx = Math.max(8, Math.min(GRID_W - 8, Math.round((mx / rect.width) * GRID_W)));
+        const gz = Math.max(8, Math.min(GRID_H - 8, Math.round((my / rect.height) * GRID_H)));
+        state.retardantDrops.push({
+          x1: gx - 5,
+          z1: gz - 3,
+          x2: gx + 5,
+          z2: gz + 3,
+          time: state.timeProgress
+        });
+        document.getElementById('dropCountBadge').textContent = state.retardantDrops.length;
+        return;
+      }
+
+      if (state.activeTool === 'spot') {
+        const gx = Math.max(6, Math.min(GRID_W - 6, Math.round((mx / rect.width) * GRID_W)));
+        const gz = Math.max(6, Math.min(GRID_H - 6, Math.round((my / rect.height) * GRID_H)));
+        state.spotFires.push({
+          gx,
+          gz,
+          time: state.timeProgress,
+          label: `Spot Fire (${formatSimTime(state.timeProgress)})`
+        });
+        return;
+      }
+
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', e => {
+      const rect = terrainCanvas.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        const gx = Math.max(0, Math.min(GRID_W - 1, Math.floor(((e.clientX - rect.left) / rect.width) * GRID_W)));
+        const gz = Math.max(0, Math.min(GRID_H - 1, Math.floor(((e.clientY - rect.top) / rect.height) * GRID_H)));
+        const h = heightMap[gz * GRID_W + gx];
+        const elevM = Math.round(620 + h * 1120);
+        const slopeDeg = Math.round(14 + (h * 22) % 26);
+        document.getElementById('probeTitle').innerHTML = `<strong>${elevM.toLocaleString()} m · ${slopeDeg}° slope · SSW-facing</strong>`;
+        const latSec = (30 + (gz / GRID_H) * 29).toFixed(0);
+        const lonSec = (1 + (gx / GRID_W) * 28).toFixed(0);
+        document.getElementById('probeCoords').textContent = `34°17'${latSec}"N  117°51'${lonSec.padStart(2, '0')}"W`;
+      }
+
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      state.yaw += dx * 0.007;
+      state.pitch = Math.max(0.25, Math.min(1.35, state.pitch + dy * 0.006));
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    terrainCanvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      state.zoom = Math.max(0.65, Math.min(2.1, state.zoom - e.deltaY * 0.0008));
+    }, { passive: false });
+
+    // UI Controls Wiring
+    const timeSlider = document.getElementById('timeSlider');
+    const currentTimeBadge = document.getElementById('currentTimeBadge');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+
+    function updateTimeUI() {
+      timeSlider.value = Math.round(state.timeProgress);
+      currentTimeBadge.textContent = formatSimTime(state.timeProgress);
+    }
+
+    timeSlider.addEventListener('input', e => {
+      state.timeProgress = parseFloat(e.target.value);
+      updateTimeUI();
+    });
+
+    btnPlayPause.addEventListener('click', () => {
+      state.playing = !state.playing;
+      btnPlayPause.textContent = state.playing ? '❚❚' : '▶';
+      btnPlayPause.classList.toggle('playing', state.playing);
+    });
+
+    document.getElementById('btnStepBack').addEventListener('click', () => {
+      state.timeProgress = Math.max(0, state.timeProgress - 40);
+      updateTimeUI();
+    });
+
+    document.getElementById('btnStepFwd').addEventListener('click', () => {
+      state.timeProgress = Math.min(1000, state.timeProgress + 40);
+      updateTimeUI();
+    });
+
+    document.getElementById('btnSpeed').addEventListener('click', e => {
+      const speeds = [1, 2, 5];
+      const next = speeds[(speeds.indexOf(state.speed) + 1) % speeds.length];
+      state.speed = next;
+      e.target.textContent = `${next}×`;
+    });
+
+    // Mode toolbar buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.activeTool = btn.dataset.tool;
+      });
+    });
+
+    // Layer checkboxes and opacity sliders
+    document.querySelectorAll('[data-layer]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        state.layers[cb.dataset.layer].visible = cb.checked;
+      });
+    });
+
+    document.querySelectorAll('[data-opacity]').forEach(sl => {
+      sl.addEventListener('input', () => {
+        const key = sl.dataset.opacity;
+        state.layers[key].opacity = parseFloat(sl.value) / 100;
+        sl.nextElementSibling.textContent = `${sl.value}%`;
+      });
+    });
+
+    // Wind override sliders
+    document.getElementById('windSpeedSlider').addEventListener('input', e => {
+      state.windSpeed = parseInt(e.target.value, 10);
+      document.getElementById('windSliderLabel').textContent = `${state.windSpeed} mph`;
+      document.getElementById('valWind').textContent = `${state.windSpeed} mph`;
+      recomputeFireSpread(state.windSpeed, state.windAzimuth);
+    });
+
+    document.getElementById('windDirSlider').addEventListener('input', e => {
+      state.windAzimuth = parseInt(e.target.value, 10);
+      document.getElementById('windDirSliderLabel').textContent = `${state.windAzimuth}°`;
+      document.getElementById('valWindDir').textContent = `Az ${state.windAzimuth}°`;
+      recomputeFireSpread(state.windSpeed, state.windAzimuth);
+    });
+
+    // Key Events jump
+    document.querySelectorAll('.event-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.event-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        state.timeProgress = parseFloat(item.dataset.progress);
+        updateTimeUI();
+      });
+    });
+
+    // 3D / 2.5x toggles
+    document.getElementById('btn3DToggle').addEventListener('click', e => {
+      state.is3D = !state.is3D;
+      e.target.classList.toggle('active', state.is3D);
+    });
+
+    document.getElementById('btnExagToggle').addEventListener('click', e => {
+      state.zExag = state.zExag === 1.0 ? 1.65 : 1.0;
+      e.target.classList.toggle('active', state.zExag > 1.0);
+    });
+
+    document.getElementById('btnResetCamera').addEventListener('click', () => {
+      state.yaw = -0.58;
+      state.pitch = 0.62;
+      state.zoom = 1.04;
+    });
+
+    document.getElementById('compassBtn').addEventListener('click', () => {
+      state.yaw = 0;
+    });
+
+    // Main Animation Loop
+    function animate() {
+      if (state.playing) {
+        state.timeProgress += 0.55 * state.speed;
+        if (state.timeProgress > 1000) state.timeProgress = 0;
+        updateTimeUI();
+      }
+      renderScene();
+      renderCharts();
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>

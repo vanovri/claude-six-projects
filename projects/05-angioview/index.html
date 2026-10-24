@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AngioView — 3D Heart & Coronary Angiography Simulator</title>
+  <style>
+    :root {
+      --bg-dark: #0d100f;
+      --bg-panel: #141816;
+      --bg-card: #1b201e;
+      --border: #2a312d;
+      --text-main: #e2e8e4;
+      --text-muted: #7e8a83;
+      --accent-amber: #d4a338;
+      --accent-green: #34d399;
+      --accent-lad: #f97316;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 32px 1fr;
+    }
+
+    header.angio-topbar {
+      background: #101412;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-size: 12px;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      color: #a7f3d0;
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1.15fr 280px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Panel Headers & Pill Buttons */
+    .panel-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--bg-panel);
+      overflow: hidden;
+    }
+
+    .panel-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: #171c19;
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .panel-kicker {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .pill-group {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .med-pill {
+      background: #212724;
+      color: #9ca8a1;
+      border: 1px solid #323b36;
+      padding: 3px 7px;
+      border-radius: 3px;
+      font-size: 10px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    .med-pill:hover {
+      color: #fff;
+      border-color: #4b5750;
+    }
+
+    .med-pill.active {
+      background: rgba(212, 163, 56, 0.18);
+      color: #f3c65f;
+      border-color: rgba(212, 163, 56, 0.55);
+    }
+
+    /* Left Column: 3D Heart Viewport */
+    .heart3d-wrap {
+      flex: 1;
+      position: relative;
+      background: #0f1311;
+      overflow: hidden;
+    }
+
+    #heart3DCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    .orient-cube {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      width: 28px;
+      height: 28px;
+      border: 1px solid #45504a;
+      background: rgba(20, 25, 22, 0.85);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .vessel-tooltip {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(16, 20, 18, 0.88);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      pointer-events: none;
+    }
+
+    /* Center Column: Fluoroscopy Angiogram + Bottom 2D Angle Map */
+    .center-col {
+      display: grid;
+      grid-template-rows: 1fr 195px;
+      border-right: 1px solid var(--border);
+      background: var(--bg-panel);
+      overflow: hidden;
+    }
+
+    .fluoro-wrap {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .fluoro-stage {
+      flex: 1;
+      position: relative;
+      background: #5c5e5c;
+      overflow: hidden;
+    }
+
+    #fluoroCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .angle-map-dock {
+      display: grid;
+      grid-template-columns: 155px 1fr;
+      background: #121614;
+      overflow: hidden;
+    }
+
+    .angle-details {
+      padding: 10px 12px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    #anglePlaneCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* Right Column: C-Arm Controls, Presets & 3D Gantry */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      overflow-y: auto;
+    }
+
+    .ctrl-block {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slider-box {
+      background: #181d1a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-top: 6px;
+    }
+
+    .slider-readout {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: #f3f4f6;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"].angio-slider {
+      width: 100%;
+      accent-color: var(--accent-amber);
+      height: 4px;
+      cursor: pointer;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .preset-card {
+      background: #1b211e;
+      border: 1px solid #2a322d;
+      border-radius: 3px;
+      padding: 5px 6px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .preset-card:hover {
+      border-color: var(--accent-amber);
+      background: #222925;
+    }
+
+    .preset-card.active {
+      border-color: var(--accent-amber);
+      background: rgba(212, 163, 56, 0.14);
+    }
+
+    .p-name {
+      font-size: 10px;
+      font-weight: 600;
+      color: #d1d5db;
+    }
+
+    .p-coords {
+      font-size: 8.5px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .gantry-wrap {
+      flex: 1;
+      min-height: 185px;
+      position: relative;
+      background: #0e1210;
+    }
+
+    #gantryCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header class="angio-topbar">
+    <div class="brand-left">
+      <a href="../../index.html" class="back-btn">← All 6 Projects</a>
+      <strong>AngioView</strong>
+      <span style="color:var(--text-muted);font-size:11px">3D Coronary Angiography & C-Arm Fluoroscopy Trainer</span>
+    </div>
+    <div style="color:var(--text-muted);font-size:11px">For educational purposes · Built with Claude</div>
+  </header>
+
+  <div class="workspace-grid">
+    <!-- LEFT COLUMN: 3D HEART & RIB CAGE -->
+    <section class="panel-col">
+      <div class="panel-bar">
+        <span class="panel-kicker">3D HEART</span>
+        <div class="pill-group">
+          <button class="med-pill active" id="togTree">Coronary tree</button>
+          <button class="med-pill active" id="togForeshort">Foreshortening</button>
+          <button class="med-pill active" id="togSkeleton">Skeleton</button>
+          <button class="med-pill active" id="togSeeThrough">See-through</button>
+          <button class="med-pill active" id="togLabels">Labels</button>
+        </div>
+      </div>
+
+      <div class="heart3d-wrap">
+        <canvas id="heart3DCanvas"></canvas>
+        <div class="vessel-tooltip" id="vesselTooltip">
+          <span style="color:#34d399">● RCA</span> · <span style="color:#f97316">● LAD</span> · <span style="color:#fbbf24">● LCx</span>
+          <div style="color:#9ca3af;font-size:10px;margin-top:2px" id="activeSegmentInfo">Selected: Mid-LAD (Foreshortening: 6%)</div>
+        </div>
+        <div class="orient-cube" id="orientCube">A</div>
+      </div>
+
+      <div class="panel-bar" style="border-top:1px solid var(--border);border-bottom:none">
+        <span class="panel-kicker">DOMINANCE</span>
+        <div class="pill-group">
+          <button class="med-pill active" data-dom="right">Right</button>
+          <button class="med-pill" data-dom="left">Left</button>
+          <button class="med-pill" data-dom="co">Co</button>
+          <button class="med-pill" id="btnResetHeart">Reset orientation</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: FLUOROSCOPY ANGIOGRAM + 2D ANGLE PLANE -->
+    <section class="center-col">
+      <div class="fluoro-wrap">
+        <div class="panel-bar">
+          <span class="panel-kicker">ANGIOGRAM</span>
+          <div class="pill-group">
+            <button class="med-pill" data-catheter="left">Left coronary</button>
+            <button class="med-pill" data-catheter="right">Right coronary</button>
+            <button class="med-pill active" data-catheter="both">Both</button>
+            <button class="med-pill" id="btnLesion">Lesion (70% Mid-LAD)</button>
+            <button class="med-pill active" id="btnContrast">Contrast Puff</button>
+          </div>
+        </div>
+        <div class="fluoro-stage">
+          <canvas id="fluoroCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="angle-map-dock">
+        <div class="angle-details">
+          <div>
+            <div id="dockAngleReadout" style="color:#f3f4f6;font-weight:700;font-size:12px">RAO 1°<br/>CRA 3°</div>
+            <div style="color:var(--text-muted);font-size:10px;margin-top:6px">HEART BEAT</div>
+            <div style="color:#34d399;font-size:11px">72 BPM (Sinus)</div>
+          </div>
+          <div>
+            <div class="panel-kicker" style="margin-bottom:3px">DETAILS</div>
+            <div style="font-size:10px;color:#9ca3af">Optimal view for:</div>
+            <div id="optimalViewHint" style="font-size:10.5px;color:#f3c65f">Mid-LAD & Diagonal bifurcation</div>
+          </div>
+        </div>
+        <canvas id="anglePlaneCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: CONTROLS, STANDARD VIEWS & 3D C-ARM GANTRY -->
+    <aside class="right-col">
+      <div class="ctrl-block">
+        <div class="panel-kicker">CONTROLS</div>
+
+        <div class="slider-box">
+          <div class="panel-kicker" style="font-size:9px">ROTATION (LAO / RAO)</div>
+          <div class="slider-readout">
+            <span id="raoLabel">RAO 1°</span>
+            <span style="font-size:10px;color:var(--text-muted)">±90°</span>
+          </div>
+          <input type="range" class="angio-slider" id="raoSlider" min="-90" max="90" value="-1" />
+        </div>
+
+        <div class="slider-box">
+          <div class="panel-kicker" style="font-size:9px">ANGULATION (CRA / CAU)</div>
+          <div class="slider-readout">
+            <span id="craLabel">CRA 3°</span>
+            <span style="font-size:10px;color:var(--text-muted)">±45°</span>
+          </div>
+          <input type="range" class="angio-slider" id="craSlider" min="-45" max="45" value="3" />
+        </div>
+      </div>
+
+      <div class="ctrl-block">
+        <div class="panel-kicker">LEFT CORONARY PRESETS</div>
+        <div class="preset-grid">
+          <button class="preset-card" data-rao="40" data-cra="-30">
+            <div class="p-name">Spider</div>
+            <div class="p-coords">LAO 40° CAU 30°</div>
+          </button>
+          <button class="preset-card" data-rao="-30" data-cra="-25">
+            <div class="p-name">RAO caudal</div>
+            <div class="p-coords">RAO 30° CAU 25°</div>
+          </button>
+          <button class="preset-card" data-rao="0" data-cra="-30">
+            <div class="p-name">AP caudal</div>
+            <div class="p-coords">AP 0° CAU 30°</div>
+          </button>
+          <button class="preset-card" data-rao="0" data-cra="30">
+            <div class="p-name">AP cranial</div>
+            <div class="p-coords">AP 0° CRA 30°</div>
+          </button>
+          <button class="preset-card" data-rao="40" data-cra="25">
+            <div class="p-name">LAO cranial</div>
+            <div class="p-coords">LAO 40° CRA 25°</div>
+          </button>
+          <button class="preset-card" data-rao="-30" data-cra="25">
+            <div class="p-name">RAO cranial</div>
+            <div class="p-coords">RAO 30° CRA 25°</div>
+          </button>
+        </div>
+
+        <div class="panel-kicker" style="margin-top:10px">RIGHT CORONARY PRESETS</div>
+        <div class="preset-grid">
+          <button class="preset-card" data-rao="30" data-cra="0">
+            <div class="p-name">LAO</div>
+            <div class="p-coords">LAO 30° CRA 0°</div>
+          </button>
+          <button class="preset-card" data-rao="-30" data-cra="0">
+            <div class="p-name">RAO</div>
+            <div class="p-coords">RAO 30° CRA 0°</div>
+          </button>
+          <button class="preset-card" data-rao="20" data-cra="25">
+            <div class="p-name">LAO cranial</div>
+            <div class="p-coords">LAO 20° CRA 25°</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="gantry-wrap">
+        <canvas id="gantryCanvas"></canvas>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // =========================================================================
+    // AngioView — 3D Coronary Artery Tree, Fluoroscopy X-Ray & C-Arm Simulator
+    // =========================================================================
+    const angio = {
+      laoDeg: -1, // negative = RAO, positive = LAO
+      craDeg: 3,  // positive = CRA, negative = CAU
+      showTree: true,
+      showForeshort: true,
+      showSkeleton: true,
+      showSeeThrough: true,
+      showLabels: true,
+      catheterMode: 'both', // 'left' | 'right' | 'both'
+      showLesion: false,
+      contrastPulse: 1.0,
+      beatPhase: 0
+    };
+
+    // 3D Anatomical Coronary Artery Branches (in normalized cardiac coordinates)
+    const CORONARY_BRANCHES = [
+      {
+        name: 'RCA (Right Coronary)',
+        side: 'right',
+        color: '#34d399',
+        width: 3.6,
+        pts: [
+          [-0.08, 0.36, 0.08],
+          [-0.28, 0.28, 0.18],
+          [-0.44, 0.10, 0.22],
+          [-0.46, -0.14, 0.16],
+          [-0.34, -0.34, 0.02],
+          [-0.12, -0.42, -0.14]
+        ]
+      },
+      {
+        name: 'PDA (Posterior Descending)',
+        side: 'right',
+        color: '#34d399',
+        width: 2.2,
+        pts: [
+          [-0.12, -0.42, -0.14],
+          [-0.02, -0.48, -0.05],
+          [0.10, -0.52, 0.06]
+        ]
+      },
+      {
+        name: 'Acute Marginal (AM1)',
+        side: 'right',
+        color: '#34d399',
+        width: 1.8,
+        pts: [
+          [-0.44, 0.02, 0.20],
+          [-0.32, -0.18, 0.30],
+          [-0.18, -0.32, 0.34]
+        ]
+      },
+      {
+        name: 'LMCA (Left Main)',
+        side: 'left',
+        color: '#f87171',
+        width: 4.2,
+        pts: [
+          [0.06, 0.38, 0.05],
+          [0.18, 0.34, 0.14]
+        ]
+      },
+      {
+        name: 'LAD (Left Anterior Descending)',
+        side: 'left',
+        color: '#f97316',
+        width: 3.5,
+        hasLesionAt: 2,
+        pts: [
+          [0.18, 0.34, 0.14],
+          [0.24, 0.18, 0.28],
+          [0.26, -0.04, 0.36],
+          [0.24, -0.26, 0.34],
+          [0.18, -0.46, 0.24],
+          [0.12, -0.56, 0.12]
+        ]
+      },
+      {
+        name: 'Diagonal 1 (D1)',
+        side: 'left',
+        color: '#fb923c',
+        width: 2.1,
+        pts: [
+          [0.24, 0.14, 0.29],
+          [0.38, 0.02, 0.28],
+          [0.46, -0.16, 0.22]
+        ]
+      },
+      {
+        name: 'Diagonal 2 (D2)',
+        side: 'left',
+        color: '#fb923c',
+        width: 1.8,
+        pts: [
+          [0.25, -0.10, 0.35],
+          [0.38, -0.24, 0.30],
+          [0.44, -0.38, 0.22]
+        ]
+      },
+      {
+        name: 'Septal Perforator (S1)',
+        side: 'left',
+        color: '#fdba74',
+        width: 1.5,
+        pts: [
+          [0.25, 0.06, 0.32],
+          [0.14, -0.02, 0.12],
+          [0.05, -0.10, -0.02]
+        ]
+      },
+      {
+        name: 'LCx (Left Circumflex)',
+        side: 'left',
+        color: '#fbbf24',
+        width: 3.2,
+        pts: [
+          [0.18, 0.34, 0.14],
+          [0.34, 0.22, -0.04],
+          [0.44, 0.04, -0.18],
+          [0.40, -0.18, -0.24],
+          [0.26, -0.34, -0.22]
+        ]
+      },
+      {
+        name: 'Obtuse Marginal (OM1)',
+        side: 'left',
+        color: '#fcd34d',
+        width: 2.1,
+        pts: [
+          [0.41, 0.10, -0.14],
+          [0.48, -0.08, -0.04],
+          [0.45, -0.28, 0.04]
+        ]
+      }
+    ];
+
+    const heartCanvas = document.getElementById('heart3DCanvas');
+    const hCtx = heartCanvas.getContext('2d');
+    const fluoroCanvas = document.getElementById('fluoroCanvas');
+    const fCtx = fluoroCanvas.getContext('2d');
+    const planeCanvas = document.getElementById('anglePlaneCanvas');
+    const pCtx = planeCanvas.getContext('2d');
+    const gantryCanvas = document.getElementById('gantryCanvas');
+    const gCtx = gantryCanvas.getContext('2d');
+
+    function resizeAngioCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+      [heartCanvas, fluoroCanvas, planeCanvas, gantryCanvas].forEach(c => {
+        const r = c.getBoundingClientRect();
+        c.width = r.width * dpr;
+        c.height = r.height * dpr;
+      });
+    }
+    window.addEventListener('resize', resizeAngioCanvases);
+    resizeAngioCanvases();
+
+    // Rotate 3D point by C-Arm LAO/RAO (yaw) and CRA/CAU (pitch) + systolic beat
+    function projectCardiacPoint(pt, W, H, scaleMult = 0.42) {
+      const beatScale = 1 + 0.025 * Math.sin(angio.beatPhase);
+      const x = pt[0] * beatScale;
+      const y = pt[1] * beatScale;
+      const z = pt[2] * beatScale;
+
+      const yaw = (angio.laoDeg * Math.PI) / 180;
+      const pitch = (-angio.craDeg * Math.PI) / 180;
+
+      const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+      const rx = x * cosY - z * sinY;
+      const rz = x * sinY + z * cosY;
+
+      const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+      const ry = y * cosP - rz * sinP;
+      const depth = y * sinP + rz * cosP + 1.8;
+
+      const s = Math.min(W, H) * scaleMult;
+      return {
+        px: W * 0.50 + rx * s,
+        py: H * 0.52 - ry * s,
+        depth,
+        rz: depth
+      };
+    }
+
+    // 1. Render Left Column: 3D Heart, Ribcage & Coronary Tree
+    function render3DHeart() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = heartCanvas.width / dpr;
+      const H = heartCanvas.height / dpr;
+      hCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      hCtx.fillStyle = '#0f1311';
+      hCtx.fillRect(0, 0, W, H);
+
+      // Draw translucent thoracic ribcage & spine silhouette (`Skeleton`)
+      if (angio.showSkeleton) {
+        hCtx.save();
+        hCtx.strokeStyle = 'rgba(148, 163, 184, 0.11)';
+        hCtx.lineWidth = 10;
+        hCtx.lineCap = 'round';
+
+        // Spine column
+        const spTop = projectCardiacPoint([0, 0.85, -0.45], W, H);
+        const spBot = projectCardiacPoint([0, -0.85, -0.45], W, H);
+        hCtx.beginPath();
+        hCtx.moveTo(spTop.px, spTop.py);
+        hCtx.lineTo(spBot.px, spBot.py);
+        hCtx.stroke();
+
+        // Ribs
+        for (let r = -3; r <= 3; r++) {
+          const ry = r * 0.22;
+          hCtx.beginPath();
+          for (let a = -2.4; a <= 2.4; a += 0.3) {
+            const p = projectCardiacPoint([Math.sin(a) * 0.88, ry - Math.cos(a) * 0.08, Math.cos(a) * 0.55 - 0.1], W, H);
+            if (a === -2.4) hCtx.moveTo(p.px, p.py);
+            else hCtx.lineTo(p.px, p.py);
+          }
+          hCtx.stroke();
+        }
+        hCtx.restore();
+      }
+
+      // Draw 3D Myocardium & Aortic Root Silhouette (`See-through`)
+      const heartCenter = projectCardiacPoint([0.05, -0.08, 0], W, H);
+      const rad = Math.min(W, H) * 0.25;
+      hCtx.save();
+      hCtx.translate(heartCenter.px, heartCenter.py);
+      hCtx.rotate(-0.38);
+      const heartGrad = hCtx.createRadialGradient(-rad * 0.2, -rad * 0.2, rad * 0.1, 0, 0, rad * 1.15);
+      const alpha = angio.showSeeThrough ? 0.52 : 0.92;
+      heartGrad.addColorStop(0, `rgba(145, 68, 58, ${alpha})`);
+      heartGrad.addColorStop(1, `rgba(68, 28, 24, ${alpha})`);
+      hCtx.fillStyle = heartGrad;
+      hCtx.beginPath();
+      hCtx.ellipse(0, 0, rad * 0.86, rad * 1.08, 0, 0, Math.PI * 2);
+      hCtx.fill();
+      hCtx.restore();
+
+      // Draw Color-Coded 3D Coronary Arteries
+      if (angio.showTree) {
+        CORONARY_BRANCHES.forEach(br => {
+          const pts2D = br.pts.map(p => projectCardiacPoint(p, W, H));
+          hCtx.save();
+          hCtx.strokeStyle = br.color;
+          hCtx.lineWidth = br.width;
+          hCtx.lineCap = 'round';
+          hCtx.lineJoin = 'round';
+          hCtx.beginPath();
+          pts2D.forEach((p, idx) => {
+            if (idx === 0) hCtx.moveTo(p.px, p.py);
+            else hCtx.lineTo(p.px, p.py);
+          });
+          hCtx.stroke();
+
+          // Highlight lesion if enabled
+          if (angio.showLesion && br.hasLesionAt !== undefined) {
+            const lp = pts2D[br.hasLesionAt];
+            hCtx.strokeStyle = '#ef4444';
+            hCtx.lineWidth = 2;
+            hCtx.beginPath();
+            hCtx.arc(lp.px, lp.py, 8, 0, Math.PI * 2);
+            hCtx.stroke();
+          }
+
+          // Labels
+          if (angio.showLabels && pts2D.length >= 3) {
+            const mid = pts2D[Math.floor(pts2D.length / 2)];
+            hCtx.fillStyle = 'rgba(15, 19, 17, 0.78)';
+            const shortName = br.name.split(' ')[0];
+            hCtx.font = '600 9.5px "JetBrains Mono", monospace';
+            const tw = hCtx.measureText(shortName).width;
+            hCtx.fillRect(mid.px + 5, mid.py - 8, tw + 6, 13);
+            hCtx.fillStyle = br.color;
+            hCtx.fillText(shortName, mid.px + 8, mid.py + 2);
+          }
+          hCtx.restore();
+        });
+      }
+    }
+
+    // 2. Render Center Top: Simulated X-Ray Fluoroscopy Angiogram
+    function renderFluoroscopy() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = fluoroCanvas.width / dpr;
+      const H = fluoroCanvas.height / dpr;
+      fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Realistic medical X-ray fluoroscopy grayscale field with vignette & cardiac silhouette
+      const vig = fCtx.createRadialGradient(W * 0.5, H * 0.5, W * 0.08, W * 0.5, H * 0.5, W * 0.62);
+      vig.addColorStop(0, '#969896');
+      vig.addColorStop(0.65, '#6e706e');
+      vig.addColorStop(1, '#363836');
+      fCtx.fillStyle = vig;
+      fCtx.fillRect(0, 0, W, H);
+
+      // Faint cardiac shadow in X-ray
+      const hc = projectCardiacPoint([0.05, -0.08, 0], W, H, 0.44);
+      fCtx.save();
+      fCtx.translate(hc.px, hc.py);
+      fCtx.rotate(-0.35);
+      fCtx.fillStyle = 'rgba(55, 57, 55, 0.25)';
+      fCtx.beginPath();
+      fCtx.ellipse(0, 0, Math.min(W, H) * 0.22, Math.min(W, H) * 0.28, 0, 0, Math.PI * 2);
+      fCtx.fill();
+      fCtx.restore();
+
+      // Draw Diagnostic Catheter coming down descending aorta
+      fCtx.strokeStyle = 'rgba(38, 40, 38, 0.75)';
+      fCtx.lineWidth = 3.2;
+      fCtx.beginPath();
+      const ostium = projectCardiacPoint([0.02, 0.37, 0.06], W, H, 0.44);
+      fCtx.moveTo(W * 0.46, 0);
+      fCtx.quadraticCurveTo(W * 0.44, H * 0.22, ostium.px, ostium.py);
+      fCtx.stroke();
+
+      // Draw Radio-opaque Iodine Contrast in Coronary Vessels
+      const contrastAlpha = 0.82 * angio.contrastPulse;
+      CORONARY_BRANCHES.forEach(br => {
+        if (angio.catheterMode !== 'both' && br.side !== angio.catheterMode) return;
+        const pts = br.pts.map(p => projectCardiacPoint(p, W, H, 0.44));
+
+        fCtx.save();
+        fCtx.strokeStyle = `rgba(28, 30, 28, ${contrastAlpha})`;
+        fCtx.lineWidth = br.width * 1.12;
+        fCtx.lineCap = 'round';
+        fCtx.lineJoin = 'round';
+        fCtx.beginPath();
+        pts.forEach((p, idx) => {
+          if (idx === 0) fCtx.moveTo(p.px, p.py);
+          else fCtx.lineTo(p.px, p.py);
+        });
+        fCtx.stroke();
+
+        // Simulate 70% Mid-LAD stenosis narrowing if toggled
+        if (angio.showLesion && br.hasLesionAt !== undefined) {
+          const lp = pts[br.hasLesionAt];
+          fCtx.fillStyle = '#848684';
+          fCtx.beginPath();
+          fCtx.arc(lp.px, lp.py, 2.2, 0, Math.PI * 2);
+          fCtx.fill();
+          fCtx.strokeStyle = '#fbbf24';
+          fCtx.lineWidth = 1.3;
+          fCtx.beginPath();
+          fCtx.arc(lp.px, lp.py, 9, 0, Math.PI * 2);
+          fCtx.stroke();
+        }
+        fCtx.restore();
+      });
+
+      // Top-left & Top-right fluoroscopy HUD text
+      const raoTxt = angio.laoDeg <= 0 ? `RAO ${Math.abs(angio.laoDeg)}°` : `LAO ${angio.laoDeg}°`;
+      const craTxt = angio.craDeg >= 0 ? `CRA ${angio.craDeg}°` : `CAU ${Math.abs(angio.craDeg)}°`;
+      fCtx.fillStyle = '#e5e7eb';
+      fCtx.font = '600 10.5px "JetBrains Mono", monospace';
+      fCtx.fillText(`${raoTxt}  ${craTxt}`, 10, 18);
+      fCtx.fillText('15 FPS · FL · II 20cm', W - 125, 18);
+    }
+
+    // 3. Render Center Bottom: 2D Angle Map (RAO/LAO vs CRA/CAU)
+    function renderAnglePlane() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = planeCanvas.width / dpr;
+      const H = planeCanvas.height / dpr;
+      pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      pCtx.fillStyle = '#111513';
+      pCtx.fillRect(0, 0, W, H);
+
+      // Axes & grid
+      pCtx.strokeStyle = '#242c27';
+      pCtx.lineWidth = 1;
+      for (let i = 1; i < 6; i++) {
+        const x = (i / 6) * W;
+        pCtx.beginPath(); pCtx.moveTo(x, 0); pCtx.lineTo(x, H); pCtx.stroke();
+      }
+      for (let j = 1; j < 4; j++) {
+        const y = (j / 4) * H;
+        pCtx.beginPath(); pCtx.moveTo(0, y); pCtx.lineTo(W, y); pCtx.stroke();
+      }
+
+      pCtx.strokeStyle = '#38433c';
+      pCtx.beginPath();
+      pCtx.moveTo(W * 0.5, 0); pCtx.lineTo(W * 0.5, H);
+      pCtx.moveTo(0, H * 0.5); pCtx.lineTo(W, H * 0.5);
+      pCtx.stroke();
+
+      // Standard view zone circles (matching frame_06.jpg)
+      const zones = [
+        { name: 'RAO cran', lao: -30, cra: 25 },
+        { name: 'AP cran', lao: 0, cra: 30 },
+        { name: 'LAO cran', lao: 40, cra: 25 },
+        { name: 'RAO caud', lao: -30, cra: -25 },
+        { name: 'AP caud', lao: 0, cra: -30 },
+        { name: 'Spider', lao: 40, cra: -30 }
+      ];
+
+      pCtx.font = '9px "JetBrains Mono", monospace';
+      pCtx.textAlign = 'center';
+      zones.forEach(z => {
+        const zx = ((z.lao + 90) / 180) * W;
+        const zy = ((45 - z.cra) / 90) * H;
+        pCtx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        pCtx.beginPath();
+        pCtx.arc(zx, zy, 20, 0, Math.PI * 2);
+        pCtx.stroke();
+        pCtx.fillStyle = '#7e8a83';
+        pCtx.fillText(z.name, zx, zy + 3);
+      });
+
+      // Current C-arm angle crosshair
+      const cx = ((angio.laoDeg + 90) / 180) * W;
+      const cy = ((45 - angio.craDeg) / 90) * H;
+
+      pCtx.strokeStyle = 'rgba(212, 163, 56, 0.45)';
+      pCtx.beginPath();
+      pCtx.moveTo(cx, 0); pCtx.lineTo(cx, H);
+      pCtx.moveTo(0, cy); pCtx.lineTo(W, cy);
+      pCtx.stroke();
+
+      pCtx.fillStyle = '#f3c65f';
+      pCtx.beginPath();
+      pCtx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      pCtx.fill();
+    }
+
+    // 4. Render Bottom-Right: 3D C-Arm Gantry & Patient Table
+    function renderGantry() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = gantryCanvas.width / dpr;
+      const H = gantryCanvas.height / dpr;
+      gCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      gCtx.fillStyle = '#0e1210';
+      gCtx.fillRect(0, 0, W, H);
+
+      const cx = W * 0.48;
+      const cy = H * 0.54;
+
+      // Patient Table & Silhouette
+      gCtx.strokeStyle = '#475569';
+      gCtx.fillStyle = '#1e293b';
+      gCtx.lineWidth = 2;
+      gCtx.beginPath();
+      gCtx.moveTo(cx - 18, cy + 6);
+      gCtx.lineTo(cx + 88, cy + 28);
+      gCtx.lineTo(cx + 76, cy + 36);
+      gCtx.lineTo(cx - 30, cy + 14);
+      gCtx.closePath();
+      gCtx.fill();
+      gCtx.stroke();
+
+      // Rotating C-Arm Arc
+      const raoRad = (angio.laoDeg * Math.PI) / 180;
+      const craRad = (angio.craDeg * Math.PI) / 180;
+      const armRadius = 46;
+
+      gCtx.save();
+      gCtx.translate(cx, cy);
+      gCtx.rotate(raoRad * 0.65 + craRad * 0.35);
+
+      // C-Arc
+      gCtx.strokeStyle = '#94a3b8';
+      gCtx.lineWidth = 7;
+      gCtx.beginPath();
+      gCtx.arc(0, 0, armRadius, Math.PI * 0.35, Math.PI * 1.65);
+      gCtx.stroke();
+
+      // Flat-Panel Detector (Top)
+      gCtx.fillStyle = '#cbd5e1';
+      gCtx.fillRect(-14, -armRadius - 6, 28, 10);
+      gCtx.fillStyle = '#f3c65f';
+      gCtx.font = '9px "JetBrains Mono", monospace';
+      gCtx.fillText('Detector (II)', -26, -armRadius - 10);
+
+      // X-Ray Tube (Bottom)
+      gCtx.fillStyle = '#64748b';
+      gCtx.beginPath();
+      gCtx.arc(0, armRadius, 8, 0, Math.PI * 2);
+      gCtx.fill();
+
+      // X-Ray Beam Cone
+      gCtx.fillStyle = 'rgba(243, 198, 95, 0.12)';
+      gCtx.beginPath();
+      gCtx.moveTo(0, armRadius - 6);
+      gCtx.lineTo(-12, -armRadius + 4);
+      gCtx.lineTo(12, -armRadius + 4);
+      gCtx.closePath();
+      gCtx.fill();
+
+      gCtx.restore();
+    }
+
+    // Sync UI Readouts & Sliders
+    function syncAngleUI() {
+      const raoTxt = angio.laoDeg <= 0 ? `RAO ${Math.abs(angio.laoDeg)}°` : `LAO ${angio.laoDeg}°`;
+      const craTxt = angio.craDeg >= 0 ? `CRA ${angio.craDeg}°` : `CAU ${Math.abs(angio.craDeg)}°`;
+
+      document.getElementById('raoLabel').textContent = raoTxt;
+      document.getElementById('craLabel').textContent = craTxt;
+      document.getElementById('raoSlider').value = angio.laoDeg;
+      document.getElementById('craSlider').value = angio.craDeg;
+      document.getElementById('dockAngleReadout').innerHTML = `${raoTxt}<br/>${craTxt}`;
+
+      const foreshort = Math.max(2, Math.round(Math.abs(Math.sin((angio.laoDeg - 15) * 0.02)) * 38));
+      document.getElementById('activeSegmentInfo').textContent =
+        `Selected: Mid-LAD (Foreshortening: ${foreshort}%)`;
+    }
+
+    document.getElementById('raoSlider').addEventListener('input', e => {
+      angio.laoDeg = parseInt(e.target.value, 10);
+      syncAngleUI();
+    });
+
+    document.getElementById('craSlider').addEventListener('input', e => {
+      angio.craDeg = parseInt(e.target.value, 10);
+      syncAngleUI();
+    });
+
+    // Preset view buttons
+    document.querySelectorAll('.preset-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        angio.laoDeg = parseInt(card.dataset.rao, 10);
+        angio.craDeg = parseInt(card.dataset.cra, 10);
+        document.getElementById('optimalViewHint').textContent = `${card.querySelector('.p-name').textContent} standard projection`;
+        syncAngleUI();
+      });
+    });
+
+    // Drag on 2D Angle Map
+    let draggingPlane = false;
+    function updateFromPlaneMouse(e) {
+      const r = planeCanvas.getBoundingClientRect();
+      const u = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      const v = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+      angio.laoDeg = Math.round(u * 180 - 90);
+      angio.craDeg = Math.round(45 - v * 90);
+      syncAngleUI();
+    }
+    planeCanvas.addEventListener('mousedown', e => { draggingPlane = true; updateFromPlaneMouse(e); });
+    window.addEventListener('mousemove', e => { if (draggingPlane) updateFromPlaneMouse(e); });
+    window.addEventListener('mouseup', () => { draggingPlane = false; });
+
+    // Drag on 3D Heart Viewport
+    let draggingHeart = false, lastHX = 0, lastHY = 0;
+    heartCanvas.addEventListener('mousedown', e => { draggingHeart = true; lastHX = e.clientX; lastHY = e.clientY; });
+    window.addEventListener('mousemove', e => {
+      if (!draggingHeart) return;
+      const dx = e.clientX - lastHX;
+      const dy = e.clientY - lastHY;
+      lastHX = e.clientX; lastHY = e.clientY;
+      angio.laoDeg = Math.max(-90, Math.min(90, Math.round(angio.laoDeg + dx * 0.45)));
+      angio.craDeg = Math.max(-45, Math.min(45, Math.round(angio.craDeg - dy * 0.35)));
+      syncAngleUI();
+    });
+    window.addEventListener('mouseup', () => { draggingHeart = false; });
+
+    // Toggle Buttons
+    const bindToggle = (id, key) => {
+      document.getElementById(id).addEventListener('click', e => {
+        angio[key] = !angio[key];
+        e.target.classList.toggle('active', angio[key]);
+      });
+    };
+    bindToggle('togTree', 'showTree');
+    bindToggle('togForeshort', 'showForeshort');
+    bindToggle('togSkeleton', 'showSkeleton');
+    bindToggle('togSeeThrough', 'showSeeThrough');
+    bindToggle('togLabels', 'showLabels');
+    bindToggle('btnLesion', 'showLesion');
+
+    document.querySelectorAll('[data-catheter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-catheter]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        angio.catheterMode = btn.dataset.catheter;
+      });
+    });
+
+    document.getElementById('btnContrast').addEventListener('click', () => {
+      angio.contrastPulse = 1.25;
+      setTimeout(() => { angio.contrastPulse = 1.0; }, 600);
+    });
+
+    document.getElementById('btnResetHeart').addEventListener('click', () => {
+      angio.laoDeg = -1;
+      angio.craDeg = 3;
+      syncAngleUI();
+    });
+
+    function animateAngio() {
+      angio.beatPhase += 0.08;
+      render3DHeart();
+      renderFluoroscopy();
+      renderAnglePlane();
+      renderGantry();
+      requestAnimationFrame(animateAngio);
+    }
+    syncAngleUI();
+    animateAngio();
+  </script>
+</body>
+</html>

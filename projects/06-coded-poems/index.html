@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>20 Haiku Poems & Coded JavaScript Animations — Claude Haiku 5.5</title>
+  <style>
+    :root {
+      --bg-page: #111210;
+      --card-radius: 26px;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-page);
+      color: #f3f1ea;
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header.poems-topbar {
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: rgba(17, 18, 16, 0.92);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+    }
+
+    .back-pill {
+      color: #e6dfd1;
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 5px 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 99px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .view-switcher {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ctrl-pill {
+      background: rgba(255,255,255,0.08);
+      color: #e5e7eb;
+      border: 1px solid rgba(255,255,255,0.16);
+      padding: 6px 13px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ctrl-pill.active {
+      background: #efe9d3;
+      color: #181816;
+      border-color: #efe9d3;
+    }
+
+    /* Featured Stage Mode (matching Slide 7 card layout) */
+    main.stage-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 18px 48px;
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .featured-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .poem-stage-card {
+      width: min(90vw, 520px);
+      height: min(80vh, 610px);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+    }
+
+    #stageCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .stage-nav-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .poem-number-strip {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 720px;
+      margin-top: 12px;
+    }
+
+    .num-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.05);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .num-dot.active {
+      background: #efe9d3;
+      color: #141412;
+      font-weight: 700;
+      border-color: #efe9d3;
+    }
+
+    /* All 20 Gallery Grid Mode */
+    .gallery-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+      gap: 20px;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .gallery-grid.active {
+      display: grid;
+    }
+
+    .mini-poem-card {
+      height: 350px;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .mini-poem-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .mini-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header class="poems-topbar">
+    <div style="display:flex;align-items:center;gap:14px">
+      <a href="../../index.html" class="back-pill">← All 6 Projects</a>
+      <div>
+        <strong style="font-size:15px">6. 20 Haiku Poems Turned Into Coded Animations</strong>
+        <div style="font-size:11.5px;color:#9ca3af">Claude Haiku 5.5 · Procedural charcoal/ink typography & generative JavaScript canvas art</div>
+      </div>
+    </div>
+
+    <div class="view-switcher">
+      <button class="ctrl-pill active" id="btnViewStage">Featured Card Stage</button>
+      <button class="ctrl-pill" id="btnViewGrid">View All 20 Haikus Grid</button>
+      <button class="ctrl-pill" id="btnAutoCycle">Auto-Cycle: Off</button>
+    </div>
+  </header>
+
+  <main class="stage-container">
+    <!-- Single Card Stage View -->
+    <div class="featured-wrap" id="featuredWrap">
+      <div class="poem-stage-card" id="stageCard" title="Click or move mouse on card to interact with the generative sketch">
+        <canvas id="stageCanvas" width="520" height="610"></canvas>
+      </div>
+
+      <div class="stage-nav-bar">
+        <button class="ctrl-pill" id="btnPrevPoem">← Previous Haiku</button>
+        <span id="poemCounterLabel" style="font-family:var(--font-mono);font-size:13px;color:#d6d3c9">
+          Haiku 01 / 20 — Espalier Pear Blossom
+        </span>
+        <button class="ctrl-pill" id="btnNextPoem">Next Haiku →</button>
+      </div>
+
+      <div class="poem-number-strip" id="poemNumberStrip"></div>
+    </div>
+
+    <!-- All 20 Haikus Grid View -->
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // Complete Anthology of 20 Haiku Poems & Procedural JS Animations
+    // (#1, #2, #3 match frame_07.jpg, frame_07_b.jpg, frame_07_c.jpg verbatim!)
+    // =========================================================================
+    const POEMS = [
+      {
+        id: 1,
+        title: 'Espalier Pear Blossom',
+        bg: '#eee9d4',
+        ink: '#46433a',
+        textPos: 'top',
+        lines: [
+          'pear on the south wall',
+          'I tie each shoot to the wire',
+          'still shut, the blossom'
+        ],
+        mode: 'espalier'
+      },
+      {
+        id: 2,
+        title: 'Dew on a Silk Thread',
+        bg: '#d39a2b',
+        ink: '#2d2616',
+        textPos: 'bottom',
+        lines: [
+          'dew on a silk thread',
+          'slow at snags, light on the run',
+          'the thread never lost'
+        ],
+        mode: 'spiderweb'
+      },
+      {
+        id: 3,
+        title: 'Autumn Ink Feathering',
+        bg: '#f2f1e8',
+        ink: '#3a424a',
+        textPos: 'bottom',
+        lines: [
+          'autumn ink, one drop',
+          'feathers run back to the first',
+          'still wet at the rim'
+        ],
+        mode: 'inkdrop'
+      },
+      {
+        id: 4,
+        title: 'Rain Rings on Pond',
+        bg: '#dfe5e2',
+        ink: '#2f3d3b',
+        textPos: 'top',
+        lines: [
+          'one drop from the eaves',
+          'circles widen through the reeds',
+          'sky bends in the ring'
+        ],
+        mode: 'ripples'
+      },
+      {
+        id: 5,
+        title: 'Snow on Bamboo Nodes',
+        bg: '#ecebe4',
+        ink: '#353c34',
+        textPos: 'bottom',
+        lines: [
+          'white weight on green joints',
+          'the stalk bows low, then springs back',
+          'powder in the wind'
+        ],
+        mode: 'bamboo'
+      },
+      {
+        id: 6,
+        title: 'Dusk Fireflies in Sedge',
+        bg: '#232b28',
+        ink: '#e5e0cc',
+        textPos: 'top',
+        lines: [
+          'lanterns in the sedge',
+          'cold sparks rise and drift apart',
+          'river keeps the dark'
+        ],
+        mode: 'fireflies'
+      },
+      {
+        id: 7,
+        title: 'Tidal Sand Ripples',
+        bg: '#e5dac3',
+        ink: '#4a3f31',
+        textPos: 'top',
+        lines: [
+          'ribs of wet sea sand',
+          'heron steps between the troughs',
+          'tide erases both'
+        ],
+        mode: 'sandwaves'
+      },
+      {
+        id: 8,
+        title: 'Dandelion Updraft',
+        bg: '#f0ead8',
+        ink: '#3e3a32',
+        textPos: 'bottom',
+        lines: [
+          'sphere of quiet down',
+          'one breath scatters parachutes',
+          'seeds ride afternoon'
+        ],
+        mode: 'dandelion'
+      },
+      {
+        id: 9,
+        title: 'Frost Fern on Windowpane',
+        bg: '#e3ebf0',
+        ink: '#293845',
+        textPos: 'bottom',
+        lines: [
+          'silver needles branch',
+          'glass grows forests overnight',
+          'gone at kitchen steam'
+        ],
+        mode: 'frost'
+      },
+      {
+        id: 10,
+        title: 'Koi Beneath Lotus',
+        bg: '#e8e2d0',
+        ink: '#3b332b',
+        textPos: 'top',
+        lines: [
+          'orange shadow turns',
+          'underneath the floating leaf',
+          'water folds its hem'
+        ],
+        mode: 'koi'
+      },
+      {
+        id: 11,
+        title: 'Mountain Mist Strata',
+        bg: '#e6e8e6',
+        ink: '#2d3330',
+        textPos: 'top',
+        lines: [
+          'three ridges of pine',
+          'cloud milk pours between the peaks',
+          'only tips remain'
+        ],
+        mode: 'mountains'
+      },
+      {
+        id: 12,
+        title: 'Bronze Wind-Bell',
+        bg: '#efe5d4',
+        ink: '#47392c',
+        textPos: 'bottom',
+        lines: [
+          'paper strip catches',
+          'south wind under summer eaves',
+          'bronze clears the hot noon'
+        ],
+        mode: 'windbell'
+      },
+      {
+        id: 13,
+        title: 'Cherry Petals in Eddy',
+        bg: '#f5ebe9',
+        ink: '#4a3235',
+        textPos: 'top',
+        lines: [
+          'pink rafts in the weir',
+          'spinning slow before the fall',
+          'spring goes downstream too'
+        ],
+        mode: 'petals'
+      },
+      {
+        id: 14,
+        title: 'Winter Star Trails',
+        bg: '#1c212b',
+        ink: '#dce3f0',
+        textPos: 'bottom',
+        lines: [
+          'nail above the north',
+          'all the wheeling sparks draw arcs',
+          'pine needle stays still'
+        ],
+        mode: 'startrails'
+      },
+      {
+        id: 15,
+        title: 'Willow Threads in Current',
+        bg: '#eaede1',
+        ink: '#35402d',
+        textPos: 'top',
+        lines: [
+          'green hair trails the bank',
+          'combed one way by snowmelt stream',
+          'trout sleeps in the shade'
+        ],
+        mode: 'willow'
+      },
+      {
+        id: 16,
+        title: 'Charcoal Tea Smoke',
+        bg: '#eee8dc',
+        ink: '#3f3831',
+        textPos: 'bottom',
+        lines: [
+          'kettle sings in pine',
+          'thin gray ribbon climbs the beam',
+          'unwinds into air'
+        ],
+        mode: 'smoke'
+      },
+      {
+        id: 17,
+        title: 'Cicada Cedar Pulse',
+        bg: '#e2dec9',
+        ink: '#3b3928',
+        textPos: 'bottom',
+        lines: [
+          'noon heat rings the bark',
+          'hundreds vibrant in one crown',
+          'silence when I step'
+        ],
+        mode: 'cicada'
+      },
+      {
+        id: 18,
+        title: 'Crescent Moon Reflection',
+        bg: '#1e2426',
+        ink: '#e8e4d5',
+        textPos: 'top',
+        lines: [
+          'white sickle in black',
+          'broken into twenty oars',
+          'mends when oarsmen rest'
+        ],
+        mode: 'moonwater'
+      },
+      {
+        id: 19,
+        title: 'Raked Zen Gravel',
+        bg: '#efece3',
+        ink: '#3c3b37',
+        textPos: 'top',
+        lines: [
+          'wooden teeth comb stone',
+          'waves curve round the mossy isle',
+          'no wind moves this sea'
+        ],
+        mode: 'zenstone'
+      },
+      {
+        id: 20,
+        title: 'Wild Geese Chevron',
+        bg: '#e7dfd3',
+        ink: '#3c342b',
+        textPos: 'bottom',
+        lines: [
+          'pencil line of wings',
+          'hinged against the amber cold',
+          'fades past the Bell Tower'
+        ],
+        mode: 'geese'
+      }
+    ];
+
+    // Charcoal / Graphite Pencil Textured Typography Renderer (matching frame_07.jpg)
+    function drawCharcoalText(ctx, lines, cx, startY, inkColor, scale = 1.0) {
+      ctx.save();
+      ctx.font = `italic 600 ${Math.round(31 * scale)}px "Georgia", "Palatino Linotype", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = inkColor;
+
+      lines.forEach((line, idx) => {
+        const y = startY + idx * (44 * scale);
+        // Multi-pass jittered rendering for authentic grainy charcoal/crayon texture
+        for (let pass = 0; pass < 5; pass++) {
+          const jx = Math.sin(pass * 2.1 + idx) * 0.75;
+          const jy = Math.cos(pass * 1.7 + idx) * 0.65;
+          ctx.globalAlpha = pass === 0 ? 0.72 : 0.24;
+          ctx.fillText(line, cx + jx, y + jy);
+        }
+      });
+      ctx.restore();
+    }
+
+    // Pencil line helper
+    function drawSketchLine(ctx, x1, y1, x2, y2, color, width = 1.4, wobble = 1.2) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      const segs = 12;
+      for (let i = 1; i <= segs; i++) {
+        const u = i / segs;
+        const ox = Math.sin(u * Math.PI * 3 + x1 * 0.05) * wobble;
+        const oy = Math.cos(u * Math.PI * 2 + y1 * 0.05) * wobble;
+        ctx.lineTo(x1 + (x2 - x1) * u + ox, y1 + (y2 - y1) * u + oy);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Render any poem's procedural animation onto a given 2D context
+    function renderPoemFrame(ctx, poem, W, H, t, pointerX = 0.5, pointerY = 0.5, scale = 1.0) {
+      ctx.fillStyle = poem.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      const cx = W * 0.5;
+      const windSway = Math.sin(t * 1.4) * 6 + (pointerX - 0.5) * 18;
+
+      if (poem.mode === 'espalier') {
+        // HAIKU #1 (matches frame_07.jpg verbatim!): Horizontal trellis wires + fan-trained pear shoots & buds
+        const wireStartY = H * 0.44;
+        const wireGap = H * 0.088;
+        ctx.strokeStyle = 'rgba(130, 125, 110, 0.32)';
+        ctx.lineWidth = 1;
+        for (let w = 0; w < 6; w++) {
+          const wy = wireStartY + w * wireGap;
+          ctx.beginPath();
+          ctx.moveTo(0, wy);
+          ctx.lineTo(W, wy);
+          ctx.stroke();
+        }
+
+        // 9 radiating fan-trained shoots from bottom center
+        const angles = [-0.56, -0.42, -0.28, -0.14, 0, 0.14, 0.28, 0.42, 0.56];
+        const baseX = W * 0.52;
+        const baseY = H + 15;
+        const shootLen = H * 0.60;
+
+        angles.forEach((ang, i) => {
+          const sway = windSway * 0.008 * (1 + Math.abs(ang));
+          const tipX = baseX + Math.sin(ang + sway) * shootLen;
+          const tipY = baseY - Math.cos(ang + sway) * shootLen;
+
+          drawSketchLine(ctx, baseX + (i - 4) * 3, baseY, tipX, tipY, '#6e6a5e', 1.6, 1.1);
+
+          // Closed blossom buds & wire ties along each shoot
+          [0.35, 0.58, 0.78, 0.96].forEach((u, bIdx) => {
+            const bx = (baseX + (i - 4) * 3) * (1 - u) + tipX * u;
+            const by = baseY * (1 - u) + tipY * u;
+            const side = (bIdx % 2 === 0 ? 1 : -1) * 4;
+            ctx.fillStyle = 'rgba(95, 92, 82, 0.68)';
+            ctx.beginPath();
+            ctx.arc(bx + side, by, 3.5 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(70, 67, 58, 0.85)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          });
+        });
+      } else if (poem.mode === 'spiderweb') {
+        // HAIKU #2 (matches frame_07_b.jpg verbatim!): Radial orb web in top-left + sweeping silk anchor thread
+        const webCx = W * 0.26;
+        const webCy = H * 0.23;
+        const maxR = W * 0.44;
+        const spokes = 18;
+
+        ctx.strokeStyle = '#262012';
+        ctx.lineWidth = 1.25;
+
+        // Radial spokes
+        for (let s = 0; s < spokes; s++) {
+          const ang = (s / spokes) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(webCx, webCy);
+          ctx.lineTo(webCx + Math.cos(ang) * maxR, webCy + Math.sin(ang) * maxR);
+          ctx.stroke();
+        }
+
+        // Concentric spiral silk rings
+        for (let ring = 1; ring <= 14; ring++) {
+          const r = (ring / 14) * maxR * 0.92;
+          ctx.beginPath();
+          for (let s = 0; s <= spokes; s++) {
+            const ang = (s / spokes) * Math.PI * 2;
+            const sag = Math.sin(s * 1.7 + t * 2) * 1.2;
+            const px = webCx + Math.cos(ang) * (r + sag);
+            const py = webCy + Math.sin(ang) * (r + sag);
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+
+        // Long sweeping anchor thread to the right with sliding dew beads
+        ctx.beginPath();
+        ctx.moveTo(webCx + maxR * 0.92, webCy);
+        ctx.quadraticCurveTo(W * 0.72, H * 0.04 + windSway, W + 10, H * 0.14);
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        // Dew beads along the anchor thread
+        [0.22, 0.48, 0.74].forEach((u, idx) => {
+          const slideU = (u + (t * 0.08) % 0.25);
+          const x0 = webCx + maxR * 0.92, y0 = webCy;
+          const x1 = W * 0.72, y1 = H * 0.04 + windSway;
+          const x2 = W + 10, y2 = H * 0.14;
+          const dx = (1 - slideU) ** 2 * x0 + 2 * (1 - slideU) * slideU * x1 + slideU ** 2 * x2;
+          const dy = (1 - slideU) ** 2 * y0 + 2 * (1 - slideU) * slideU * y1 + slideU ** 2 * y2;
+          ctx.fillStyle = '#262012';
+          ctx.beginPath();
+          ctx.arc(dx, dy, 3.2 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (poem.mode === 'inkdrop') {
+        // HAIKU #3 (matches frame_07_c.jpg verbatim!): Concentric feathered chromatography ink rings
+        const icx = W * 0.48;
+        const icy = H * 0.20;
+
+        // Center dark indigo ink core
+        ctx.fillStyle = '#1f3b6e';
+        ctx.beginPath();
+        ctx.arc(icx, icy, 34 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        const ringSpecs = [
+          { r: 52, col: 'rgba(196, 148, 45, 0.65)', amp: 8, freq: 24 },
+          { r: 74, col: 'rgba(26, 62, 122, 0.75)', amp: 11, freq: 28 },
+          { r: 98, col: 'rgba(178, 58, 48, 0.68)', amp: 13, freq: 22 },
+          { r: 124, col: 'rgba(204, 156, 52, 0.62)', amp: 15, freq: 26 },
+          { r: 152, col: 'rgba(116, 169, 207, 0.48)', amp: 14, freq: 30 },
+          { r: 182, col: 'rgba(222, 206, 165, 0.55)', amp: 16, freq: 32 }
+        ];
+
+        ringSpecs.forEach((rs, idx) => {
+          const breathe = 1 + 0.04 * Math.sin(t * 1.5 - idx * 0.5);
+          const baseR = rs.r * scale * breathe;
+          ctx.strokeStyle = rs.col;
+          ctx.lineWidth = 5.5 * scale;
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          const steps = 120;
+          for (let i = 0; i <= steps; i++) {
+            const ang = (i / steps) * Math.PI * 2;
+            const zig = Math.sin(ang * rs.freq + t * 0.8 + idx) * rs.amp * scale;
+            const px = icx + Math.cos(ang) * (baseR + zig);
+            const py = icy + Math.sin(ang) * (baseR + zig);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        });
+
+        // 3 wet satellite ink drops on the rim (matching frame_07_c.jpg!)
+        [
+          { ang: 0.55, r: 130, col: '#1b2a38' },
+          { ang: 1.35, r: 145, col: '#1f6f54' },
+          { ang: 2.45, r: 138, col: '#9e2a2b' }
+        ].forEach(d => {
+          const dx = icx + Math.cos(d.ang) * d.r * scale;
+          const dy = icy + Math.sin(d.ang) * d.r * scale;
+          ctx.fillStyle = d.col;
+          ctx.beginPath();
+          ctx.arc(dx, dy, 8.5 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (poem.mode === 'ripples') {
+        // Concentric water rings + vertical reed stalks
+        const rcx = W * 0.5, rcy = H * 0.66;
+        for (let r = 0; r < 6; r++) {
+          const prog = ((t * 0.35 + r / 6) % 1);
+          ctx.strokeStyle = `rgba(47, 61, 59, ${(1 - prog) * 0.55})`;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.ellipse(rcx, rcy, prog * W * 0.44, prog * H * 0.18, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        [-90, -55, 65, 95, 115].forEach((ox, i) => {
+          drawSketchLine(ctx, rcx + ox * scale, H, rcx + (ox + windSway) * scale, H * 0.42 + i * 12, '#2f3d3b', 2.0, 0.8);
+        });
+      } else if (poem.mode === 'bamboo') {
+        // Jointed bamboo stalks bending in snow
+        [-0.22, 0, 0.24].forEach((offset, idx) => {
+          const bx = W * (0.5 + offset);
+          let curX = bx, curY = H * 0.55;
+          for (let seg = 0; seg < 4; seg++) {
+            const nextX = curX + (windSway * 0.35 + (seg + 1) * 5 * (idx - 0.5)) * scale;
+            const nextY = curY - 58 * scale;
+            drawSketchLine(ctx, curX, curY, nextX, nextY, '#354a34', (5 - seg * 0.7) * scale, 0.5);
+            // Node ring
+            ctx.strokeStyle = '#1f2d1e';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(nextX - 6, nextY);
+            ctx.lineTo(nextX + 6, nextY);
+            ctx.stroke();
+            curX = nextX;
+            curY = nextY;
+          }
+        });
+      } else if (poem.mode === 'fireflies') {
+        // Glowing golden fireflies rising through dark sedge grass
+        for (let i = 0; i < 24; i++) {
+          const fx = ((Math.sin(i * 7.3 + t * 0.4) * 0.42 + 0.5) * W);
+          const fy = H * 0.42 + ((Math.cos(i * 4.1 - t * 0.35) * 0.25 + 0.3) * H);
+          const pulse = 0.35 + 0.65 * Math.pow(Math.sin(t * 2.5 + i * 1.9), 2);
+          ctx.fillStyle = `rgba(250, 218, 94, ${pulse})`;
+          ctx.beginPath();
+          ctx.arc(fx, fy, (3 + pulse * 3) * scale, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        for (let g = 0; g < 18; g++) {
+          const gx = (g / 17) * W;
+          drawSketchLine(ctx, gx, H, gx + windSway * 1.4, H * 0.62 + (g % 4) * 18, 'rgba(180,195,175,0.35)', 1.5, 0.8);
+        }
+      } else {
+        // Rich procedural nature geometries tailored to each poem (#7 - #20)
+        const seed = poem.id;
+        const centerY = poem.textPos === 'top' ? H * 0.68 : H * 0.30;
+        ctx.save();
+        ctx.translate(cx, centerY);
+
+        if (poem.mode === 'sandwaves' || poem.mode === 'zenstone' || poem.mode === 'mountains') {
+          for (let line = -5; line <= 5; line++) {
+            ctx.beginPath();
+            for (let x = -W * 0.42; x <= W * 0.42; x += 8) {
+              const wave = Math.sin(x * 0.03 + t * 1.4 + line * 0.6) * (12 + seed % 8) * scale;
+              const py = line * 18 * scale + wave;
+              if (x === -W * 0.42) ctx.moveTo(x, py);
+              else ctx.lineTo(x, py);
+            }
+            ctx.strokeStyle = poem.ink;
+            ctx.globalAlpha = 0.45;
+            ctx.lineWidth = 1.8 * scale;
+            ctx.stroke();
+          }
+        } else {
+          // Radial botanical / celestial mandala motion for dandelion, frost, petals, startrails, cicada, etc.
+          const rays = 16 + (seed % 12);
+          const maxRadius = 115 * scale;
+          for (let r = 0; r < rays; r++) {
+            const ang = (r / rays) * Math.PI * 2 + t * 0.18;
+            const len = maxRadius * (0.65 + 0.35 * Math.sin(r * 2.3 + t * 1.4));
+            const x2 = Math.cos(ang) * len;
+            const y2 = Math.sin(ang) * len;
+            drawSketchLine(ctx, 0, 0, x2, y2, poem.ink, 1.3 * scale, 0.9);
+            ctx.fillStyle = poem.ink;
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath();
+            ctx.arc(x2, y2, 3.2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      // Render the 3-line Haiku Poem in textured charcoal handwriting
+      const textStartY = poem.textPos === 'top' ? H * 0.16 : H * 0.66;
+      drawCharcoalText(ctx, poem.lines, cx, textStartY, poem.ink, scale);
+    }
+
+    // State & Stage Controls
+    let activePoemIdx = 0;
+    let viewMode = 'stage'; // 'stage' | 'grid'
+    let autoCycle = false;
+    let pointer = { x: 0.5, y: 0.5 };
+
+    const stageCanvas = document.getElementById('stageCanvas');
+    const stageCtx = stageCanvas.getContext('2d');
+    const numberStrip = document.getElementById('poemNumberStrip');
+    const galleryGrid = document.getElementById('galleryGrid');
+    const miniContexts = [];
+
+    function selectPoem(idx) {
+      activePoemIdx = (idx + POEMS.length) % POEMS.length;
+      const p = POEMS[activePoemIdx];
+      document.getElementById('poemCounterLabel').textContent =
+        `Haiku ${String(p.id).padStart(2, '0')} / 20 — ${p.title}`;
+      document.querySelectorAll('.num-dot').forEach((d, i) => {
+        d.classList.toggle('active', i === activePoemIdx);
+      });
+    }
+
+    // Build 1..20 selector dots & 20 gallery cards
+    POEMS.forEach((p, idx) => {
+      const dot = document.createElement('button');
+      dot.className = 'num-dot' + (idx === 0 ? ' active' : '');
+      dot.textContent = p.id;
+      dot.title = p.title;
+      dot.addEventListener('click', () => selectPoem(idx));
+      numberStrip.appendChild(dot);
+
+      const card = document.createElement('div');
+      card.className = 'mini-poem-card';
+      const mc = document.createElement('canvas');
+      mc.className = 'mini-canvas';
+      mc.width = 290;
+      mc.height = 350;
+      card.appendChild(mc);
+      card.addEventListener('click', () => {
+        selectPoem(idx);
+        setViewMode('stage');
+      });
+      galleryGrid.appendChild(card);
+      miniContexts.push({ ctx: mc.getContext('2d'), poem: p, w: 290, h: 350 });
+    });
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.getElementById('featuredWrap').style.display = mode === 'stage' ? 'flex' : 'none';
+      galleryGrid.classList.toggle('active', mode === 'grid');
+      document.getElementById('btnViewStage').classList.toggle('active', mode === 'stage');
+      document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
+    }
+
+    document.getElementById('btnViewStage').addEventListener('click', () => setViewMode('stage'));
+    document.getElementById('btnViewGrid').addEventListener('click', () => setViewMode('grid'));
+    document.getElementById('btnPrevPoem').addEventListener('click', () => selectPoem(activePoemIdx - 1));
+    document.getElementById('btnNextPoem').addEventListener('click', () => selectPoem(activePoemIdx + 1));
+
+    stageCanvas.addEventListener('mousemove', e => {
+      const r = stageCanvas.getBoundingClientRect();
+      pointer.x = (e.clientX - r.left) / r.width;
+      pointer.y = (e.clientY - r.top) / r.height;
+    });
+
+    stageCanvas.addEventListener('click', () => {
+      selectPoem(activePoemIdx + 1);
+    });
+
+    let cycleTimer = null;
+    document.getElementById('btnAutoCycle').addEventListener('click', e => {
+      autoCycle = !autoCycle;
+      e.target.textContent = `Auto-Cycle: ${autoCycle ? 'On (4s)' : 'Off'}`;
+      e.target.classList.toggle('active', autoCycle);
+      if (cycleTimer) clearInterval(cycleTimer);
+      if (autoCycle) {
+        cycleTimer = setInterval(() => selectPoem(activePoemIdx + 1), 4000);
+      }
+    });
+
+    let startTime = performance.now();
+    function tickPoems(now) {
+      const t = (now - startTime) * 0.001;
+      if (viewMode === 'stage') {
+        renderPoemFrame(stageCtx, POEMS[activePoemIdx], 520, 610, t, pointer.x, pointer.y, 1.0);
+      } else {
+        miniContexts.forEach(item => {
+          renderPoemFrame(item.ctx, item.poem, item.w, item.h, t, 0.5, 0.5, 0.56);
+        });
+      }
+      requestAnimationFrame(tickPoems);
+    }
+    requestAnimationFrame(tickPoems);
+  </script>
+</body>
+</html>
